@@ -29,3 +29,8 @@ class ChatCreate(BaseModel):
 class MessageCreate(BaseModel):
     sender_id: int
     message: str
+
+class ScamCheckRequest(BaseModel):
+    title: str
+    description: Optional[str] = None
+    price: float

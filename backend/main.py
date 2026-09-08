@@ -2,7 +2,7 @@ from fastapi import FastAPI,Depends
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import Session
 from dotenv import load_dotenv
-from schemas import ProductCreate,UserCreate,ChatCreate,MessageCreate
+from schemas import ProductCreate,UserCreate,ChatCreate,MessageCreate,ScamCheckRequest
 import os
 import math
 
@@ -257,4 +257,120 @@ def get_messages(
         "success": True,
         "chat_id": chat_id,
         "messages": messages
+    }
+
+@app.get("/recommendations")
+def get_recommendations(
+    category: str,
+    latitude: float,
+    longitude: float,
+    db: Session = Depends(get_db)
+):
+    products = db.query(Product).all()
+
+    recommendations = []
+
+    for product in products:
+        if product.latitude is None or product.longitude is None:
+            continue
+
+        distance = calculate_distance(
+            latitude,
+            longitude,
+            product.latitude,
+            product.longitude
+        )
+
+        # Ignore products more than 10 km away
+        if distance > 10:
+            continue
+
+        score = 0
+
+        # Category match
+        if product.category.lower() == category.lower():
+            score += 60
+
+        # Nearby products get higher score
+        if distance <= 2:
+            score += 30
+        elif distance <= 5:
+            score += 20
+        else:
+            score += 10
+
+        # Lower-priced products get a small bonus
+        if product.price <= 1000:
+            score += 10
+
+        recommendations.append({
+            "id": product.id,
+            "title": product.title,
+            "category": product.category,
+            "price": product.price,
+            "condition": product.condition,
+            "description": product.description,
+            "image_url": product.image_url,
+            "distance_km": round(distance, 2),
+            "recommendation_score": score
+        })
+
+    recommendations.sort(
+        key=lambda x: x["recommendation_score"],
+        reverse=True
+    )
+
+    return {
+        "success": True,
+        "category": category,
+        "recommendations": recommendations[:5]
+    }
+
+@app.post("/scam-check")
+def check_scam(
+    listing: ScamCheckRequest
+):
+    score = 0
+    warnings = []
+
+    text = (
+        listing.title + " " + (listing.description or "")
+    ).lower()
+
+    # Suspicious keywords
+    suspicious_words = [
+        "urgent",
+        "advance payment",
+        "send money",
+        "pay first",
+        "payment outside",
+        "upi first",
+        "deposit"
+    ]
+
+    for word in suspicious_words:
+        if word in text:
+            score += 25
+            warnings.append(f"Suspicious phrase detected: '{word}'")
+
+    # Unusually low price
+    if listing.price < 100:
+        score += 20
+        warnings.append("Price is unusually low.")
+
+    # Limit score to 100
+    score = min(score, 100)
+
+    if score >= 60:
+        risk_level = "HIGH"
+    elif score >= 30:
+        risk_level = "MEDIUM"
+    else:
+        risk_level = "LOW"
+
+    return {
+        "success": True,
+        "risk_level": risk_level,
+        "risk_score": score,
+        "warnings": warnings
     }
