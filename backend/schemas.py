@@ -34,3 +34,7 @@ class ScamCheckRequest(BaseModel):
     title: str
     description: Optional[str] = None
     price: float
+
+class WishlistCreate(BaseModel):
+    user_id: int
+    product_id: int

@@ -1,12 +1,15 @@
-from fastapi import FastAPI,Depends
+from fastapi import FastAPI, Depends, Query, UploadFile, File,Form
+from fastapi.staticfiles import StaticFiles
+from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import Session
 from dotenv import load_dotenv
-from schemas import ProductCreate,UserCreate,ChatCreate,MessageCreate,ScamCheckRequest
+from schemas import ProductCreate,UserCreate,ChatCreate,MessageCreate,ScamCheckRequest,WishlistCreate
 import os
+import shutil
 import math
 
-from models import Base,Product,User,Chat,Message
+from models import Base,Product,User,Chat,Message,Wishlist
 
 load_dotenv()
 
@@ -16,6 +19,14 @@ engine = create_engine(DATABASE_URL)
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="Campus Thrift API")
+app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 def calculate_distance(lat1, lon1, lat2, lon2):
     R = 6371  # Earth's radius in km
@@ -46,8 +57,6 @@ def get_db():
         db.close()
 
 
-
-
 @app.get("/")
 def home():
     return {
@@ -72,27 +81,52 @@ def health_check():
         }
 
 @app.post("/products")
-def create_product(product: ProductCreate, db: Session = Depends(get_db)):
+def create_product(
+    seller_id: int = Form(...),
+    title: str = Form(...),
+    category: str = Form(...),
+    price: float = Form(...),
+    condition: str = Form(...),
+    description: str = Form(None),
+    latitude: float = Form(None),
+    longitude: float = Form(None),
+    image: UploadFile = File(None),
+    db: Session = Depends(get_db)
+):
+    image_url = None
+
+    if image:
+        upload_folder = "uploads"
+        os.makedirs(upload_folder, exist_ok=True)
+
+        file_path = os.path.join(upload_folder, image.filename)
+
+        with open(file_path, "wb") as buffer:
+            shutil.copyfileobj(image.file, buffer)
+
+        image_url = f"/uploads/{image.filename}"
 
     new_product = Product(
-        seller_id=product.seller_id,
-        title=product.title,
-        category=product.category,
-        price=product.price,
-        condition=product.condition,
-        description=product.description,
-        image_url=product.image_url,
-        latitude=product.latitude,
-        longitude=product.longitude
+        seller_id=seller_id,
+        title=title,
+        category=category,
+        price=price,
+        condition=condition,
+        description=description,
+        image_url=image_url,
+        latitude=latitude,
+        longitude=longitude
     )
 
     db.add(new_product)
     db.commit()
     db.refresh(new_product)
 
-    return new_product
-
-
+    return {
+        "success": True,
+        "message": "Product created successfully.",
+        "product": new_product
+    }
 @app.get("/products")
 def get_products(db: Session = Depends(get_db)):
 
@@ -374,3 +408,96 @@ def check_scam(
         "risk_score": score,
         "warnings": warnings
     }
+
+@app.post("/wishlist")
+def add_to_wishlist(
+    wishlist: WishlistCreate,
+    db: Session = Depends(get_db)
+):
+    # Check if product is already in wishlist
+    existing_item = db.query(Wishlist).filter(
+        Wishlist.user_id == wishlist.user_id,
+        Wishlist.product_id == wishlist.product_id
+    ).first()
+
+    if existing_item:
+        return {
+            "success": False,
+            "message": "Product already in wishlist."
+        }
+
+    new_item = Wishlist(
+        user_id=wishlist.user_id,
+        product_id=wishlist.product_id
+    )
+
+    db.add(new_item)
+    db.commit()
+    db.refresh(new_item)
+
+    return {
+        "success": True,
+        "message": "Product added to wishlist.",
+        "wishlist": new_item
+    }
+
+@app.get("/wishlist/{user_id}")
+def get_wishlist(
+    user_id: int,
+    db: Session = Depends(get_db)
+):
+    wishlist_items = (
+        db.query(Wishlist)
+        .filter(Wishlist.user_id == user_id)
+        .all()
+    )
+
+    products = []
+
+    for item in wishlist_items:
+        product = db.query(Product).filter(
+            Product.id == item.product_id
+        ).first()
+
+        if product:
+            products.append({
+                "wishlist_id": item.id,
+                "product_id": product.id,
+                "title": product.title,
+                "category": product.category,
+                "price": product.price,
+                "condition": product.condition,
+                "description": product.description,
+                "image_url": product.image_url
+            })
+
+    return {
+        "success": True,
+        "user_id": user_id,
+        "wishlist": products
+    }
+
+
+@app.delete("/wishlist/{wishlist_id}")
+def remove_from_wishlist(
+    wishlist_id: int,
+    db: Session = Depends(get_db)
+):
+    wishlist_item = db.query(Wishlist).filter(
+        Wishlist.id == wishlist_id
+    ).first()
+
+    if not wishlist_item:
+        return {
+            "success": False,
+            "message": "Wishlist item not found."
+        }
+
+    db.delete(wishlist_item)
+    db.commit()
+
+    return {
+        "success": True,
+        "message": "Product removed from wishlist."
+    }
+

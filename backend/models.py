@@ -46,3 +46,10 @@ class Message(Base):
     chat_id = Column(Integer, nullable=False)
     sender_id = Column(Integer, nullable=False)
     message = Column(Text, nullable=False)
+
+class Wishlist(Base):
+    __tablename__ = "wishlists"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, nullable=False)
+    product_id = Column(Integer, nullable=False)
