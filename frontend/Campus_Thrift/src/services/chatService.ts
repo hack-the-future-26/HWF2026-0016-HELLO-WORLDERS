@@ -1,192 +1,90 @@
 import { Conversation, Message } from '../types';
-import { mockConversations, mockMessages, mockProducts, mockUsers } from '../data/mockData';
+import { api, BackendChat, BackendMessage, resolveImage } from './api';
+import { mapUser } from './productService';
 
-const LOCAL_MESSAGES_KEY = 'campus_thrift_chat_messages';
-const LOCAL_CONVERSATIONS_KEY = 'campus_thrift_chat_conversations';
+function mapChat(chat: BackendChat, currentUserId: string): Conversation {
+  const other = chat.other_user ? mapUser(chat.other_user) : undefined;
+  const product = chat.product
+    ? {
+        id: String(chat.product.id),
+        title: chat.product.title,
+        price: chat.product.price,
+        images: [resolveImage(chat.product.image_url)],
+        condition: chat.product.condition as Conversation['product'] extends infer P
+          ? P extends { condition: infer C } ? C : never : never,
+        originalPrice: chat.product.price * 1.6,
+        category: 'other' as const,
+        description: '',
+        sellerId: String(chat.seller_id),
+        campus: '',
+        pickupLocation: '',
+        tags: [],
+        createdAt: '',
+        status: 'active' as const,
+      }
+    : undefined;
+
+  return {
+    id: String(chat.id),
+    productId: String(chat.product_id),
+    participantIds: [String(chat.buyer_id), String(chat.seller_id)],
+    lastMessage: chat.last_message ?? 'Conversation started',
+    lastMessageTimestamp: new Date().toISOString(),
+    unreadCount: 0,
+    product,
+    otherParticipant: other,
+  };
+}
+
+function mapMessage(m: BackendMessage): Message {
+  return {
+    id: String(m.id),
+    conversationId: String(m.chat_id),
+    senderId: String(m.sender_id),
+    text: m.message,
+    timestamp: new Date().toISOString(),
+  };
+}
 
 class ChatService {
-  private messagesByConv: Record<string, Message[]> = {};
-  private conversations: Conversation[] = [];
-
-  constructor() {
-    this.loadState();
+  async getConversations(userId: string): Promise<Conversation[]> {
+    const res = await api.get<{ success: boolean; chats: BackendChat[] }>(`/chats?user_id=${userId}`);
+    return (res.chats ?? []).map(c => mapChat(c, userId));
   }
 
-  private loadState() {
+  async getConversationById(
+    chatId: string,
+    currentUserId: string,
+  ): Promise<{ conversation: Conversation; messages: Message[] } | null> {
     try {
-      const storedConvs = localStorage.getItem(LOCAL_CONVERSATIONS_KEY);
-      this.conversations = storedConvs ? JSON.parse(storedConvs) : [...mockConversations];
-
-      const storedMsgs = localStorage.getItem(LOCAL_MESSAGES_KEY);
-      this.messagesByConv = storedMsgs ? JSON.parse(storedMsgs) : { ...mockMessages };
-    } catch (e) {
-      console.error('Failed to load chat state', e);
-      this.conversations = [...mockConversations];
-      this.messagesByConv = { ...mockMessages };
-    }
-  }
-
-  private saveState() {
-    try {
-      localStorage.setItem(LOCAL_CONVERSATIONS_KEY, JSON.stringify(this.conversations));
-      localStorage.setItem(LOCAL_MESSAGES_KEY, JSON.stringify(this.messagesByConv));
-    } catch (e) {
-      console.error('Failed to save chat state', e);
-    }
-  }
-
-  // TODO: [Backend Integration] Replace with GET /api/chat/conversations
-  public async getConversations(userId: string): Promise<Conversation[]> {
-    return this.conversations
-      .filter(c => c.participantIds.includes(userId))
-      .map(c => {
-        const product = mockProducts.find(p => p.id === c.productId);
-        const otherUserId = c.participantIds.find(id => id !== userId);
-        const otherParticipant = mockUsers.find(u => u.id === otherUserId);
-
-        return {
-          ...c,
-          product,
-          otherParticipant
-        };
-      })
-      .sort((a, b) => new Date(b.lastMessageTimestamp).getTime() - new Date(a.lastMessageTimestamp).getTime());
-  }
-
-  // TODO: [Backend Integration] Replace with GET /api/chat/conversations/:id
-  public async getConversationById(convId: string, currentUserId: string): Promise<{ conversation: Conversation; messages: Message[] } | null> {
-    const conv = this.conversations.find(c => c.id === convId);
-    if (!conv) return null;
-
-    const product = mockProducts.find(p => p.id === conv.productId);
-    const otherUserId = conv.participantIds.find(id => id !== currentUserId);
-    const otherParticipant = mockUsers.find(u => u.id === otherUserId);
-
-    const fullConv: Conversation = {
-      ...conv,
-      product,
-      otherParticipant
-    };
-
-    const messages = this.messagesByConv[convId] || [];
-
-    // Mark as read locally
-    if (conv.unreadCount > 0) {
-      conv.unreadCount = 0;
-      this.saveState();
-    }
-
-    return {
-      conversation: fullConv,
-      messages: [...messages]
-    };
-  }
-
-  // TODO: [Backend Integration] Replace with POST /api/chat/conversations (get or create)
-  public async getOrCreateConversation(productId: string, buyerId: string, sellerId: string): Promise<string> {
-    const existing = this.conversations.find(
-      c => c.productId === productId && c.participantIds.includes(buyerId) && c.participantIds.includes(sellerId)
-    );
-
-    if (existing) {
-      return existing.id;
-    }
-
-    const newId = `conv-${Date.now()}`;
-    const newConv: Conversation = {
-      id: newId,
-      productId,
-      participantIds: [buyerId, sellerId],
-      lastMessage: 'Conversation started',
-      lastMessageTimestamp: new Date().toISOString(),
-      unreadCount: 0
-    };
-
-    this.conversations.unshift(newConv);
-    this.messagesByConv[newId] = [
-      {
-        id: `msg-${Date.now()}`,
-        conversationId: newId,
-        senderId: buyerId,
-        text: 'Hi! I am interested in this item on Campus-Thrift. Is it still available?',
-        timestamp: new Date().toISOString()
-      }
-    ];
-
-    newConv.lastMessage = 'Hi! I am interested in this item on Campus-Thrift. Is it still available?';
-    this.saveState();
-    return newId;
-  }
-
-  // TODO: [Backend Integration] Replace with POST /api/chat/conversations/:id/messages
-  public async sendMessage(
-    conversationId: string,
-    senderId: string,
-    text: string,
-    offerAmount?: number
-  ): Promise<Message> {
-    const newMessage: Message = {
-      id: `msg-${Date.now()}`,
-      conversationId,
-      senderId,
-      text,
-      timestamp: new Date().toISOString(),
-      isQuickOffer: offerAmount !== undefined,
-      offerAmount
-    };
-
-    if (!this.messagesByConv[conversationId]) {
-      this.messagesByConv[conversationId] = [];
-    }
-
-    this.messagesByConv[conversationId].push(newMessage);
-
-    const conv = this.conversations.find(c => c.id === conversationId);
-    if (conv) {
-      conv.lastMessage = text;
-      conv.lastMessageTimestamp = newMessage.timestamp;
-    }
-
-    this.saveState();
-
-    // Mock friendly automated seller response after a short delay for demonstration
-    this.triggerMockSellerReply(conversationId, senderId);
-
-    return newMessage;
-  }
-
-  private triggerMockSellerReply(conversationId: string, currentSenderId: string) {
-    const conv = this.conversations.find(c => c.id === conversationId);
-    if (!conv) return;
-
-    const otherUserId = conv.participantIds.find(id => id !== currentSenderId);
-    if (!otherUserId) return;
-
-    // Simulate seller typing back after 2.5 seconds
-    setTimeout(() => {
-      const cannedReplies = [
-        'Thanks for reaching out! Yes, that works for me. Are you on campus today?',
-        'Sounds good! I can meet up at the Student Union or library lobby.',
-        'Great, thanks for confirming! Let me know what time suits your class schedule.',
-        'Got it! Looking forward to meeting in the campus safe zone.'
-      ];
-      const randomReply = cannedReplies[Math.floor(Math.random() * cannedReplies.length)];
-
-      const replyMsg: Message = {
-        id: `msg-reply-${Date.now()}`,
-        conversationId,
-        senderId: otherUserId,
-        text: randomReply,
-        timestamp: new Date().toISOString()
+      const [chatsRes, msgsRes] = await Promise.all([
+        api.get<{ success: boolean; chats: BackendChat[] }>(`/chats?user_id=${currentUserId}`),
+        api.get<{ success: boolean; messages: BackendMessage[] }>(`/chats/${chatId}/messages`),
+      ]);
+      const meta = chatsRes.chats?.find(c => String(c.id) === chatId);
+      if (!meta) return null;
+      return {
+        conversation: mapChat(meta, currentUserId),
+        messages: (msgsRes.messages ?? []).map(mapMessage),
       };
+    } catch { return null; }
+  }
 
-      if (this.messagesByConv[conversationId]) {
-        this.messagesByConv[conversationId].push(replyMsg);
-        conv.lastMessage = randomReply;
-        conv.lastMessageTimestamp = replyMsg.timestamp;
-        this.saveState();
-      }
-    }, 2500);
+  async getOrCreateConversation(productId: string, buyerId: string, sellerId: string): Promise<string> {
+    const res = await api.post<{ id: number }>('/chats', {
+      product_id: Number(productId),
+      buyer_id: Number(buyerId),
+      seller_id: Number(sellerId),
+    });
+    return String(res.id);
+  }
+
+  async sendMessage(conversationId: string, senderId: string, text: string): Promise<Message> {
+    const res = await api.post<{ success: boolean; message: BackendMessage }>(
+      `/chats/${conversationId}/messages`,
+      { sender_id: Number(senderId), message: text }
+    );
+    return mapMessage(res.message);
   }
 }
 

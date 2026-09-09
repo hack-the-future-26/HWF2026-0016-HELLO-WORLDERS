@@ -1,70 +1,54 @@
 import { User } from '../types';
-import { mockUsers } from '../data/mockData';
+import { api, BackendUser } from './api';
+import { mapUser } from './productService';
 
-const SESSION_STORAGE_KEY = 'campus_thrift_active_user_id';
+const SESSION_KEY = 'ct_session_user';
 
-/**
- * Frontend Mock Authentication Service
- * 
- * NOTE: This is a frontend demo service. It does not implement real backend
- * authentication, passwords, JWT tokens, or server sessions.
- */
 class AuthService {
-  private activeUserId: string | null = null;
+  private currentUser: User | null = null;
 
   constructor() {
-    // Restore session from localStorage if available
     try {
-      const stored = localStorage.getItem(SESSION_STORAGE_KEY);
-      if (stored) {
-        this.activeUserId = stored;
-      } else {
-        // Default to Alex Rivera for convenient hackathon demo exploration
-        this.activeUserId = 'user-alex';
-        localStorage.setItem(SESSION_STORAGE_KEY, 'user-alex');
-      }
-    } catch {
-      this.activeUserId = 'user-alex';
+      const s = localStorage.getItem(SESSION_KEY);
+      if (s) this.currentUser = JSON.parse(s) as User;
+    } catch { this.currentUser = null; }
+  }
+
+  /** Register-or-login: backend returns existing user if email already exists. */
+  async registerOrLogin(name: string, email: string, college: string): Promise<User> {
+    const res = await api.post<{ success: boolean; message: string; user?: BackendUser }>(
+      '/users/register',
+      { name, email, college }
+    );
+    if (!res.success || !res.user) {
+      throw new Error(res.message || 'Registration failed. Please try again.');
     }
+    const user = mapUser(res.user);
+    this.setSession(user);
+    return user;
   }
 
-  // TODO: [Backend Integration] Replace with GET /api/auth/me
-  public getCurrentUser(): User | null {
-    if (!this.activeUserId) return null;
-    return mockUsers.find(u => u.id === this.activeUserId) || null;
+  private setSession(user: User) {
+    this.currentUser = user;
+    try { localStorage.setItem(SESSION_KEY, JSON.stringify(user)); } catch { /* ignore */ }
   }
 
-  public getDemoUsers(): User[] {
-    return mockUsers;
+  getCurrentUser(): User | null { return this.currentUser; }
+  isAuthenticated(): boolean { return this.currentUser !== null; }
+
+  logout(): void {
+    this.currentUser = null;
+    try { localStorage.removeItem(SESSION_KEY); } catch { /* ignore */ }
   }
 
-  // TODO: [Backend Integration] Replace with POST /api/auth/login
-  public loginAs(userId: string): User | null {
-    const user = mockUsers.find(u => u.id === userId);
-    if (user) {
-      this.activeUserId = user.id;
-      try {
-        localStorage.setItem(SESSION_STORAGE_KEY, user.id);
-      } catch (e) {
-        console.error('Storage error', e);
-      }
-      return user;
-    }
-    return null;
-  }
-
-  // TODO: [Backend Integration] Replace with POST /api/auth/logout
-  public logout(): void {
-    this.activeUserId = null;
+  async refreshCurrentUser(): Promise<User | null> {
+    if (!this.currentUser) return null;
     try {
-      localStorage.removeItem(SESSION_STORAGE_KEY);
-    } catch (e) {
-      console.error('Storage error', e);
-    }
-  }
-
-  public isAuthenticated(): boolean {
-    return this.activeUserId !== null;
+      const u = await api.get<BackendUser>(`/users/${this.currentUser.id}`);
+      const refreshed = { ...mapUser(u), avatar: this.currentUser.avatar };
+      this.setSession(refreshed);
+      return refreshed;
+    } catch { return this.currentUser; }
   }
 }
 

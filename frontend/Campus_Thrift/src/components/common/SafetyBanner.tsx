@@ -11,8 +11,10 @@ export const SafetyBanner: React.FC<SafetyBannerProps> = ({ compact = false }) =
       <div className="rounded-xl border border-emerald-200 dark:border-emerald-800/60 bg-emerald-50/70 dark:bg-emerald-950/20 p-3.5 flex items-start gap-3 text-xs text-emerald-900 dark:text-emerald-300">
         <Shield className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
         <div>
-          <span className="font-semibold text-emerald-950 dark:text-emerald-200">Campus Safety Reminder: </span>
-          Meet in public campus safe zones (Student Union, Campus Library, or Dining Commons). Always inspect items before completing payment.
+          <span className="font-semibold text-emerald-950 dark:text-emerald-200">
+            Campus Safety Reminder:{' '}
+          </span>
+          सुरक्षित स्थान पर मिलें — Central Library, Admin Block, या Hostel Common Room। Payment से पहले item जरूर check करें।
         </div>
       </div>
     );
@@ -25,7 +27,7 @@ export const SafetyBanner: React.FC<SafetyBannerProps> = ({ compact = false }) =
           <Shield className="w-5 h-5" />
         </div>
         <h3 className="font-semibold text-slate-900 dark:text-white text-base">
-          Campus-Thrift Student Safe Exchange Guide
+          CampusThrift Student Safe Exchange Guide
         </h3>
       </div>
 
@@ -33,24 +35,24 @@ export const SafetyBanner: React.FC<SafetyBannerProps> = ({ compact = false }) =
         <div className="flex items-start gap-2 bg-white/70 dark:bg-slate-800/60 p-3 rounded-xl border border-emerald-100 dark:border-slate-700">
           <MapPin className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
           <div>
-            <span className="font-semibold text-slate-900 dark:text-white block">Official Safe Zones</span>
-            Meet at the Student Union, Science Library lobby, or Campus Police safe exchange spots.
+            <span className="font-semibold text-slate-900 dark:text-white block">सुरक्षित स्थान</span>
+            Central Library, Admin Block, Canteen, या Campus Security Post पर ही मिलें।
           </div>
         </div>
 
         <div className="flex items-start gap-2 bg-white/70 dark:bg-slate-800/60 p-3 rounded-xl border border-emerald-100 dark:border-slate-700">
           <Eye className="w-4 h-4 text-teal-600 dark:text-teal-400 shrink-0 mt-0.5" />
           <div>
-            <span className="font-semibold text-slate-900 dark:text-white block">Inspect First</span>
-            Power on electronics, flip textbook pages, or test bike brakes before finalizing payment.
+            <span className="font-semibold text-slate-900 dark:text-white block">पहले जाँचें</span>
+            Electronics on करके, textbook के pages देखकर, या cycle चला कर confirm करें — तभी payment करें।
           </div>
         </div>
 
         <div className="flex items-start gap-2 bg-white/70 dark:bg-slate-800/60 p-3 rounded-xl border border-emerald-100 dark:border-slate-700">
           <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
           <div>
-            <span className="font-semibold text-slate-900 dark:text-white block">No Advance Wire/Cards</span>
-            Never send prepaid gift cards or advance wire deposits to hold any item.
+            <span className="font-semibold text-slate-900 dark:text-white block">Advance न दें</span>
+            कभी भी advance UPI, gift card, या wire transfer न करें — item मिलने पर ही pay करें।
           </div>
         </div>
       </div>

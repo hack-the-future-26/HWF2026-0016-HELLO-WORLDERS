@@ -15,7 +15,7 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
   onFilterChange,
   onReset,
   onClose,
-  isMobile = false
+  isMobile = false,
 }) => {
   const conditions: { id: ProductCondition | 'all'; label: string }[] = [
     { id: 'all', label: 'Any Condition' },
@@ -27,31 +27,26 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
 
   const campusLocations = [
     'All Campus Areas',
-    'Engineering Quad',
-    'Science Library',
-    'Maple Hall',
-    'West Campus',
-    'South Commons',
-    'North Medical Campus'
+    'Main Hostel Zone',
+    'Central Library',
+    'Academic Block',
+    'Admin Block',
+    'Canteen / Mess Area',
+    'Sports Complex',
+    'Girls Hostel',
+    'Boys Hostel',
+    'Main Gate',
   ];
 
-  const handleMinPriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = e.target.value ? Number(e.target.value) : undefined;
-    onFilterChange({ minPrice: val });
-  };
-
-  const handleMaxPriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = e.target.value ? Number(e.target.value) : undefined;
-    onFilterChange({ maxPrice: val });
-  };
-
   return (
-    <div className={`bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5 shadow-sm space-y-6 ${isMobile ? 'max-h-[85vh] overflow-y-auto' : ''}`}>
+    <div
+      className={`bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5 shadow-sm space-y-6 ${
+        isMobile ? 'max-h-[85vh] overflow-y-auto' : ''
+      }`}
+    >
       {/* Header */}
       <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
-        <h3 className="font-semibold text-sm text-slate-900 dark:text-white">
-          Filter Listings
-        </h3>
+        <h3 className="font-semibold text-sm text-slate-900 dark:text-white">Filter Listings</h3>
         <div className="flex items-center gap-2">
           <button
             type="button"
@@ -77,31 +72,24 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
       {/* Price Range */}
       <div>
         <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-2">
-          Price Range ($)
+          Price Range (₹)
         </label>
         <div className="grid grid-cols-2 gap-2">
-          <div className="relative">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-slate-400">$</span>
-            <input
-              type="number"
-              min="0"
-              placeholder="Min"
-              value={filters.minPrice ?? ''}
-              onChange={handleMinPriceChange}
-              className="w-full pl-6 pr-2 py-1.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-emerald-500"
-            />
-          </div>
-          <div className="relative">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-slate-400">$</span>
-            <input
-              type="number"
-              min="0"
-              placeholder="Max"
-              value={filters.maxPrice ?? ''}
-              onChange={handleMaxPriceChange}
-              className="w-full pl-6 pr-2 py-1.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-emerald-500"
-            />
-          </div>
+          {(['minPrice', 'maxPrice'] as const).map((key, i) => (
+            <div key={key} className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-slate-400 font-medium">₹</span>
+              <input
+                type="number"
+                min="0"
+                placeholder={i === 0 ? 'Min' : 'Max'}
+                value={filters[key] ?? ''}
+                onChange={(e) =>
+                  onFilterChange({ [key]: e.target.value ? Number(e.target.value) : undefined })
+                }
+                className="w-full pl-6 pr-2 py-1.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-emerald-500"
+              />
+            </div>
+          ))}
         </div>
       </div>
 
@@ -111,28 +99,25 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
           Item Condition
         </label>
         <div className="space-y-1.5">
-          {conditions.map((cond) => {
-            const isChecked = (filters.condition || 'all') === cond.id;
-            return (
-              <label
-                key={cond.id}
-                className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-300 cursor-pointer hover:text-slate-900 dark:hover:text-white"
-              >
-                <input
-                  type="radio"
-                  name="condition"
-                  checked={isChecked}
-                  onChange={() => onFilterChange({ condition: cond.id })}
-                  className="w-3.5 h-3.5 text-emerald-600 focus:ring-emerald-500 border-slate-300 dark:border-slate-700 dark:bg-slate-800"
-                />
-                <span>{cond.label}</span>
-              </label>
-            );
-          })}
+          {conditions.map((cond) => (
+            <label
+              key={cond.id}
+              className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-300 cursor-pointer hover:text-slate-900 dark:hover:text-white"
+            >
+              <input
+                type="radio"
+                name="condition"
+                checked={(filters.condition || 'all') === cond.id}
+                onChange={() => onFilterChange({ condition: cond.id })}
+                className="w-3.5 h-3.5 text-emerald-600 focus:ring-emerald-500 border-slate-300 dark:border-slate-700 dark:bg-slate-800"
+              />
+              <span>{cond.label}</span>
+            </label>
+          ))}
         </div>
       </div>
 
-      {/* Campus Area / Dorm Location */}
+      {/* Campus Area */}
       <div>
         <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-2">
           Campus Pickup Area
