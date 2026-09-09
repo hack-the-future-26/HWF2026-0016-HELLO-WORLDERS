@@ -48,6 +48,7 @@ class Message(Base):
     sender_id = Column(Integer, nullable=False)
     message = Column(Text, nullable=False)
 
+
 class Wishlist(Base):
     __tablename__ = "wishlists"
 

@@ -9,9 +9,8 @@ load_dotenv()
 engine = create_engine(os.getenv("DATABASE_URL"))
 
 with Session(engine) as db:
-    deleted = db.query(Product).delete()
+    n = db.query(Product).delete()
     db.commit()
-    print(f"Deleted {deleted} existing products.")
+    print(f"Deleted {n} existing products.")
 
-# Now run the full seed
 exec(open("seed.py").read())

@@ -10,16 +10,17 @@ import shutil
 import math
 import uuid
 
-from models import Base,Product,User,Chat,Message,Wishlist
+from models import Base, Product, User, Chat, Message, Wishlist
 
 load_dotenv()
 
 DATABASE_URL = os.getenv("DATABASE_URL")
-
 engine = create_engine(DATABASE_URL)
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="Campus Thrift API")
+
+os.makedirs("uploads", exist_ok=True)
 app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
 # Allow Vite dev server (port 5173) and any other origins for hackathon
@@ -60,6 +61,16 @@ def get_db():
         db.close()
 
 
+def validate_edu_email(email: str):
+    if "@" not in email or ".edu" not in email.lower():
+        raise HTTPException(
+            status_code=400,
+            detail="Only verified university .edu email addresses are accepted (e.g. name@iitd.edu).",
+        )
+
+
+# ── root / health ─────────────────────────────────────────────────────────────
+
 @app.get("/")
 def home():
     return {"message": "Welcome to Campus Thrift API!"}
@@ -68,15 +79,14 @@ def home():
 @app.get("/health")
 def health_check():
     try:
-        with engine.connect() as connection:
-            connection.execute(text("SELECT 1"))
-        return {"status": "Backend and database are connected"}
+        with engine.connect() as conn:
+            conn.execute(text("SELECT 1"))
+        return {"status": "ok", "message": "Backend and database are connected."}
     except Exception as e:
-        return {
-            "status": "Database connection failed",
-            "error": str(e)
-        }
+        return {"status": "error", "message": str(e)}
 
+
+# ── products ──────────────────────────────────────────────────────────────────
 @app.post("/products")
 def create_product(
     seller_id: int = Form(...),
@@ -113,8 +123,8 @@ def create_product(
         image_url=image_url,
         latitude=latitude,
         longitude=longitude,
+        status="active",
     )
-
     db.add(new_product)
     db.commit()
     db.refresh(new_product)
@@ -159,7 +169,6 @@ def get_nearby_products(
                 }
             )
     return nearby_products
-
 
 @app.get("/products/{product_id}")
 def get_product(product_id: int, db: Session = Depends(get_db)):
@@ -220,10 +229,65 @@ def register_user(user: UserCreate, db: Session = Depends(get_db)):
         latitude=user.latitude,
         longitude=user.longitude,
     )
-
     db.add(new_user)
     db.commit()
     db.refresh(new_user)
+    return {"success": True, "message": "Registered successfully.", "user": new_user}
+
+
+@app.get("/users/{user_id}")
+def get_user(user_id: int, db: Session = Depends(get_db)):
+    u = db.query(User).filter(User.id == user_id).first()
+    if not u:
+        raise HTTPException(status_code=404, detail="User not found.")
+    return u
+
+
+# ── chats ─────────────────────────────────────────────────────────────────────
+
+@app.get("/chats")
+def get_user_chats(user_id: int, db: Session = Depends(get_db)):
+    chats = db.query(Chat).filter(
+        (Chat.buyer_id == user_id) | (Chat.seller_id == user_id)
+    ).all()
+
+    result = []
+    for chat in chats:
+        last_msg = (
+            db.query(Message)
+            .filter(Message.chat_id == chat.id)
+            .order_by(Message.id.desc())
+            .first()
+        )
+        other_id = chat.seller_id if chat.buyer_id == user_id else chat.buyer_id
+        other_user = db.query(User).filter(User.id == other_id).first()
+        product = db.query(Product).filter(Product.id == chat.product_id).first()
+
+        result.append({
+            "id": chat.id,
+            "product_id": chat.product_id,
+            "buyer_id": chat.buyer_id,
+            "seller_id": chat.seller_id,
+            "last_message": last_msg.message if last_msg else None,
+            "last_message_id": last_msg.id if last_msg else 0,
+            "other_user": {
+                "id": other_user.id,
+                "name": other_user.name,
+                "email": other_user.email,
+                "college": other_user.college,
+                "verified": other_user.verified,
+            } if other_user else None,
+            "product": {
+                "id": product.id,
+                "title": product.title,
+                "price": product.price,
+                "image_url": product.image_url,
+                "condition": product.condition,
+            } if product else None,
+        })
+
+    result.sort(key=lambda x: x["last_message_id"], reverse=True)
+    return {"success": True, "chats": result}
 
     return {
         "success": True,
@@ -327,16 +391,15 @@ def send_message(chat_id: int, message: MessageCreate, db: Session = Depends(get
     if not chat:
         return {"success": False, "message": "Chat not found."}
 
-    new_message = Message(
+    new_msg = Message(
         chat_id=chat_id,
         sender_id=message.sender_id,
         message=message.message,
     )
-    db.add(new_message)
+    db.add(new_msg)
     db.commit()
-    db.refresh(new_message)
-
-    return {"success": True, "message": new_message}
+    db.refresh(new_msg)
+    return {"success": True, "message": new_msg}
 
 
 @app.get("/chats/{chat_id}/messages")
@@ -345,19 +408,16 @@ def get_messages(chat_id: int, db: Session = Depends(get_db)):
     if not chat:
         return {"success": False, "message": "Chat not found."}
 
-    messages = (
+    msgs = (
         db.query(Message)
         .filter(Message.chat_id == chat_id)
         .order_by(Message.id.asc())
         .all()
     )
+    return {"success": True, "chat_id": chat_id, "messages": msgs}
 
-    return {"success": True, "chat_id": chat_id, "messages": messages}
 
-
-# ---------------------------------------------------------------------------
-# Recommendations
-# ---------------------------------------------------------------------------
+# ── recommendations ───────────────────────────────────────────────────────────
 
 @app.get("/recommendations")
 def get_recommendations(
@@ -376,7 +436,6 @@ def get_recommendations(
         distance = calculate_distance(latitude, longitude, product.latitude, product.longitude)
         if distance > 10:
             continue
-
         score = 0
         if product.category.lower() == category.lower():
             score += 60
@@ -388,7 +447,6 @@ def get_recommendations(
             score += 10
         if product.price <= 1000:
             score += 10
-
         recommendations.append(
             {
                 "id": product.id,
@@ -402,7 +460,6 @@ def get_recommendations(
                 "recommendation_score": score,
             }
         )
-
     recommendations.sort(key=lambda x: x["recommendation_score"], reverse=True)
     return {"success": True, "category": category, "recommendations": recommendations[:5]}
 
@@ -433,23 +490,15 @@ def check_scam(listing: ScamCheckRequest):
 
     if listing.price < 100:
         score += 20
-        warnings.append("Price is unusually low.")
+        warnings.append("Price is unusually low — verify the listing carefully.")
 
     score = min(score, 100)
+    risk_level = "HIGH" if score >= 60 else "MEDIUM" if score >= 30 else "LOW"
 
-    if score >= 60:
-        risk_level = "HIGH"
-    elif score >= 30:
-        risk_level = "MEDIUM"
-    else:
-        risk_level = "LOW"
+    return {"success": True, "risk_level": risk_level, "risk_score": score, "warnings": warnings}
 
-    return {
-        "success": True,
-        "risk_level": risk_level,
-        "risk_score": score,
-        "warnings": warnings,
-    }
+
+# ── wishlist ──────────────────────────────────────────────────────────────────
 
 
 # ---------------------------------------------------------------------------
@@ -468,7 +517,8 @@ def add_to_wishlist(wishlist: WishlistCreate, db: Session = Depends(get_db)):
     new_item = Wishlist(user_id=wishlist.user_id, product_id=wishlist.product_id)
     db.add(new_item)
     db.commit()
-    db.refresh(new_item)
+    db.refresh(item)
+    return {"success": True, "message": "Added to wishlist.", "wishlist": item}
 
     return {"success": True, "message": "Product added to wishlist.", "wishlist": new_item}
 
