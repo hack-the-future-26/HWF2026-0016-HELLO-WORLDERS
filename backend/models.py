@@ -29,6 +29,7 @@ class Product(Base):
     image_url = Column(String(500), nullable=True)
     latitude = Column(Float, nullable=True)
     longitude = Column(Float, nullable=True)
+    status = Column(String(20), nullable=False, default="active")
 
 class Chat(Base):
     __tablename__ = "chats"
