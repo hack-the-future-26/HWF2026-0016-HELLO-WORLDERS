@@ -1,7 +1,7 @@
-"""Clear all products and re-run seed. Use when you want fresh listings."""
+"""Clears products table and re-runs seed."""
 import os
 from dotenv import load_dotenv
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 from sqlalchemy.orm import Session
 from models import Product
 
