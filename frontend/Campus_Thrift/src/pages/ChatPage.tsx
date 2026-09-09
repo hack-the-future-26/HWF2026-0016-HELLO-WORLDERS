@@ -53,7 +53,7 @@ export const ChatPage: React.FC = () => {
     if (!activeConversation || !user) return;
 
     try {
-      const sent = await chatService.sendMessage(activeConversation.id, user.id, text, offerAmount);
+      const sent = await chatService.sendMessage(activeConversation.id, user.id, text);
       setMessages(prev => [...prev, sent]);
 
       // Refresh conversations list to update snippet

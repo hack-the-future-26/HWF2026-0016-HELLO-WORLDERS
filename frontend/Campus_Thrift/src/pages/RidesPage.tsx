@@ -44,19 +44,19 @@ export const RidesPage: React.FC = () => {
             Campus Rides — Carpool &amp; Share Cab
           </h1>
           <p className="text-sm sm:text-base text-teal-100 leading-relaxed">
-            Verified batchmates के साथ cab share करें। Fuel cost split करें, safely campus से city तक travel करें।
+            Share rides with fellow students to save on fuel &amp; reduce your carbon footprint. Browse available carpools, or offer your own ride to help others commute safely and affordably.
           </p>
 
           <div className="pt-3">
             <button
               type="button"
               onClick={() =>
-                setNotice('Ride posting feature जल्द आ रहा है! अभी list में से कोई ride join करें।')
+                setNotice('Ride posting feature will be available soon! Meanwhile, you can message drivers directly to join their rides.')
               }
               className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white text-emerald-900 font-bold text-xs hover:bg-emerald-50 transition-colors shadow"
             >
               <PlusCircle className="w-4 h-4 text-emerald-600" />
-              <span>Carpool Offer करें</span>
+              <span>Offer Ride</span>
             </button>
           </div>
         </div>
@@ -101,7 +101,7 @@ export const RidesPage: React.FC = () => {
       {/* Cards */}
       {filtered.length === 0 ? (
         <div className="py-16 text-center text-slate-400 text-sm">
-          इस filter में कोई carpool नहीं मिला। जल्द और rides add होंगे!
+          No carpools found for this filter. More rides will be added soon!
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
@@ -111,7 +111,7 @@ export const RidesPage: React.FC = () => {
               ride={ride}
               onJoinClick={r =>
                 setNotice(
-                  `${r.driverName} की ride join करने के लिए उन्हें CampusThrift chat पर message करें। Shown price fuel/toll का equal split है।`,
+                  `${r.driverName} has been notified of your interest to join this ride. Please wait for their confirmation.`,
                 )
               }
             />
@@ -128,15 +128,15 @@ export const RidesPage: React.FC = () => {
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs text-slate-600 dark:text-slate-400">
           <div>
             <strong className="block text-slate-800 dark:text-slate-200">Verified Students Only</strong>
-            CampusThrift पर verified .edu email वाले students के साथ ही ride share करें।
+            CampusThrift allows only verified batchmates to post or join rides. Check driver profile &amp; reviews before confirming.
           </div>
           <div>
             <strong className="block text-slate-800 dark:text-slate-200">Campus Gate पर मिलें</strong>
-            हमेशा अपने college के main gate या well-lit public area से board करें।
+            always meet at campus gates or public areas. Avoid sharing your home address or meeting in secluded locations.
           </div>
           <div>
             <strong className="block text-slate-800 dark:text-slate-200">Fuel Split Only</strong>
-            Shown amount सिर्फ petrol, toll और cab booking का equal share है — कोई profit नहीं।
+            Shown amounts are for fuel cost sharing only. Avoid paying extra for tolls, parking, or other fees. Always confirm the final price before boarding.
           </div>
         </div>
       </div>

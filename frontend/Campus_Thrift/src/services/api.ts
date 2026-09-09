@@ -54,8 +54,8 @@ export interface BackendUser {
   email: string;
   college: string;
   verified: boolean;
-  latitude: number | null;
-  longitude: number | null;
+  latitude?: number | null;
+  longitude?: number | null;
 }
 
 export interface BackendProduct {

@@ -15,12 +15,12 @@ export const PriceGuidanceModal: React.FC<PriceGuidanceModalProps> = ({
   if (!isOpen) return null;
 
   const categories = [
-    { name: 'STEM Textbooks', range: '$30 - $55', typicalDiscount: '65% - 75% off campus bookstore', example: 'Calculus, Bio 101, O-Chem' },
-    { name: 'Graphing Calculators', range: '$45 - $65', typicalDiscount: '50% - 60% off retail', example: 'TI-84 Plus CE, TI-Nspire' },
-    { name: 'Mini Fridges & Microwaves', range: '$50 - $85', typicalDiscount: '60% off retail', example: '3.2 cu. ft dorm refrigerators' },
-    { name: 'Campus Commuter Bikes', range: '$90 - $160', typicalDiscount: '55% - 70% off retail', example: 'Trek, Giant, Specialized hybrids' },
-    { name: 'Electronics & Monitors', range: '$40 - $90', typicalDiscount: '50% off retail', example: '24" 1080p screens, noise-canceling headphones' },
-    { name: 'Lab Gear & Kits', range: '$15 - $25', typicalDiscount: '60% off bookstore kit', example: 'Lab coat + goggles, dissecting sets' },
+    { name: 'STEM Textbooks', range: '₹300 - ₹450', typicalDiscount: '65% - 75% off campus bookstore', example: 'Calculus, Bio 101, O-Chem' },
+    { name: 'Graphing Calculators', range: '₹700 - ₹1000', typicalDiscount: '50% - 60% off retail', example: 'TI-84 Plus CE, TI-Nspire' },
+    { name: 'Mini Fridges & Microwaves', range: '₹2000 - ₹3500', typicalDiscount: '60% off retail', example: '3.2 cu. ft dorm refrigerators' },
+    { name: 'Campus Commuter Bikes', range: '₹2000 - ₹1600', typicalDiscount: '55% - 70% off retail', example: 'Trek, Giant, Specialized hybrids' },
+    { name: 'Electronics & Monitors', range: '₹6000 - ₹9000', typicalDiscount: '50% off retail', example: '24" 1080p screens, noise-canceling headphones' },
+    { name: 'Lab Gear & Kits', range: '₹150 - ₹250', typicalDiscount: '60% off bookstore kit', example: 'Lab coat + goggles, dissecting sets' },
   ];
 
   return (
