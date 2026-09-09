@@ -1,496 +1,154 @@
-# 🚀 Hack the Future 26
-## Team Repository Guide
+# 🎓 Campus Thrift
 
-Welcome to the official GitHub repository for **Team `HTF26-015-Hello-Worlders`**.
+**Buy. Sell. Borrow. Lend. Ride. Connect.**
 
-This repository is your team's workspace for developing and submitting your Hack the Future 26 project.
-
-You will use this repository to:
-
-- Store your project code
-- Work together with your teammates
-- Keep track of changes
-- Review each other's work
-- Submit your final project
+A student-focused platform for buying, selling, borrowing, lending, and sharing within the campus community.
 
 ---
 
-# 🔐 Important: How This Repository Works
+## 🌟 Overview
 
-The `main` branch is **protected**.
+Campus Thrift is a campus-based platform that connects students with other students to exchange useful items and services. It helps students save money by making it easier to:
 
-This means:
+- Find affordable second-hand items  
+- Borrow things for temporary use  
+- Sell unused belongings  
+- Share rides with fellow students  
 
-> **You cannot directly push your changes to `main`.**
+---
 
-Don't worry. This is intentional and helps prevent someone from accidentally breaking the team's main code.
+## ❗ Problem
 
-Instead, everyone should work on their **own branch** and then create a **Pull Request**.
+College students often need items such as:
 
-The basic workflow is:
+- Textbooks  
+- Calculators  
+- Lab coats  
+- Drawing boards, drafters  
+- Other academic essentials  
 
-```text
-Create a branch
-      ↓
-Make your changes
-      ↓
-Save your changes
-      ↓
-Push your branch
-      ↓
-Create a Pull Request
-      ↓
-Another teammate reviews it
-      ↓
-1 approval required
-      ↓
-Merge into main
-Think of main as the team's safe and stable version of the project.
+Buying these items new can be expensive, especially when they are only needed for a short period.
 
-🟢 1. Start Working on the Project
+Students also travel to similar destinations every day but may not know other students going the same way.
 
-When you open the repository, you will see options such as:
+Campus Thrift brings these needs together in one student-focused platform.
 
-Code
-Issues
-Pull requests
-Actions
+---
 
-You normally do not need to change anything in the repository settings.
+## ✅ Solution
 
-The organizers have already configured the repository rules.
+Campus Thrift allows students to:
 
-🌿 2. Create Your Own Branch
+- Buy items from other students  
+- Sell unused items  
+- Borrow items temporarily  
+- Lend items to other students  
+- Offer rides to fellow students  
+- Request available rides  
+- Search and discover available items  
+- Connect with other students through messaging  
 
-A branch is your own working area inside the repository.
+---
 
-For example:
+## ✨ Key Features
 
-main
-│
-├── feature-login
-├── feature-ai-model
-├── fix-camera
-└── docs-readme
+### 🛒 Buy & Sell
 
-You work on your branch instead of directly changing main.
+Students can list items they no longer need and sell them to other students at affordable prices.
 
-🖱️ Method A: Using GitHub Website
+### 📚 Borrow & Lend
 
-This is the easiest method if you are new to Git.
+Students can borrow items they need temporarily or lend their own items to others.
 
-Step 1
+Examples include:
 
-Open the repository on GitHub.
+- Books  
+- Calculators  
+- Lab coats  
+- Drafters  
+- Drawing boards  
+- Stationery  
+- Academic equipment  
 
-Click the branch selector near the top of the file list.
+### 🚗 Campus Rides
 
-You will see something similar to:
+Students can offer available seats in their vehicle to other students traveling in the same direction.
 
-main ▼
-Step 2
+Ride listings can include:
 
-Type the name of your new branch.
+- Starting location  
+- Destination  
+- Date and time  
+- Available seats  
+- Fare or shared travel contribution  
 
-Example:
+Students can browse available rides and request a seat.
 
-feature-login
+### 🔍 Search & Discovery
 
-Step 3
+Students can search for items and rides and discover relevant listings based on their needs.
 
-GitHub will show an option similar to:
+### 💬 Messaging
 
-Create branch: feature-login from main
+Students can communicate with sellers, borrowers, lenders, and ride providers to discuss listings, availability, pickup points, and other details.
 
-Click it.
+### 👤 User Profiles
 
-🎉 Your branch has now been created.
+Students can have profiles containing their basic information and activity on the platform.
 
-💻 Method B: Using Git
+---
 
-If you are using Git on your computer:
+## 🎯 Target Users
 
-git checkout -b feature-login
+Campus Thrift is designed primarily for:
 
-Then check your current branch:
+- College students  
+- University students  
+- Hostel students  
+- Students living near campus  
 
-git branch
+---
 
-You should see:
+## 📖 Example Use Cases
 
-* feature-login
-  main
+- **Buying:** A student needs a calculator and finds an affordable one listed by another student.  
+- **Borrowing:** A student needs a drawing board for a short period and borrows one from another student.  
+- **Selling:** A student finishes a semester and sells textbooks they no longer need.  
+- **Lending:** A student owns equipment that is rarely used and lends it to another student.  
+- **Ride Sharing:** A student is traveling to a nearby destination and offers an empty seat to another student for a shared fare.  
 
-The * means you are currently working on feature-login.
+---
 
-🛠️ 3. Make Your Changes
+## 🛠 Technology Stack
 
-Now work normally.
+- React  
+- Vite  
+- JavaScript  
+- CSS  
+- Git  
+- GitHub  
 
-You can:
+---
 
-Add files
-Edit files
-Delete files
-Add features
-Fix bugs
-Improve documentation
+## 🔮 Future Scope
 
-Your changes are happening on your branch, not directly on main.
+- Student and college email verification  
+- Ratings and reviews  
+- Secure online payments  
+- Real-time messaging  
+- Notifications  
+- Location-based search  
+- Ride tracking  
+- AI-powered recommendations  
+- Mobile application  
+- Admin and moderation system  
 
-💾 4. Save Your Changes
+---
 
-There are two ways to save your work to GitHub.
+## 🌈 Vision
 
-🖱️ Method A: Using GitHub Website
+Campus Thrift aims to create a trusted student community where students can save money, reuse resources, share transportation, and help each other through a single campus-focused platform.
 
-If you are creating or editing a file directly on GitHub:
+---
 
-Open the file.
-Click the pencil/Edit button.
-Make your changes.
-Scroll down to the commit section.
-Enter a short description.
-
-Example:
-
-Add login page
-Choose:
-
-Create a new branch for this commit and start a pull request
-
-Click Propose changes.
-
-Your changes will now be saved to a branch.
-
-💻 Method B: Using Git
-
-After changing files on your computer:
-
-git add .
-
-Create a commit:
-
-git commit -m "Add login page"
-
-A commit is basically a saved checkpoint of your work.
-
-⬆️ 5. Push Your Branch to GitHub
-
-If you are using Git locally:
-
-git push origin feature-login
-
-Your branch will now appear on GitHub.
-
-If you are using the GitHub website, you do not need this step.
-
-🔀 6. Create a Pull Request
-
-A Pull Request, usually called a PR, means:
-
-"I finished my changes. Can someone check them before they become part of main?"
-
-🖱️ Creating a PR from GitHub
-
-After pushing your branch, GitHub may show:
-
-Compare & pull request
-
-Click it.
-
-If you don't see it:
-
-Open Pull requests.
-Click New pull request.
-Select:
-base: main
-compare: your-branch
-
-Example:
-
-base: main
-compare: feature-login
-Add a clear title
-
-Good:
-
-Add user login system
-
-Bad:
-
-changes
-Explain what you did
-
-Example:
-
-## What I changed
-
-- Added login page
-- Added email validation
-- Added logout button
-
-## Testing
-
-- Tested login with valid credentials
-- Tested invalid password
-
-Then click:
-
-Create pull request
-
-👀 7. Ask a Teammate to Review
-
-Your Pull Request needs to be checked.
-
-Our repository requires:
-
-At least 1 approval before merging.
-
-A teammate should check:
-
-Does the code work?
-Does the feature do what it should?
-Is anything broken?
-Is the code understandable?
-Are there unnecessary changes?
-Are passwords or API keys accidentally included?
-
-If everything looks good, the reviewer can click:
-
-Approve
-
-💬 8. What If the Reviewer Finds a Problem?
-
-Don't worry.
-
-You do not need to create another Pull Request.
-
-Make the required changes on the same branch.
-
-For example:
-
-Reviewer:
-"Please fix the login validation."
-
-        ↓
-
-You fix it
-
-        ↓
-
-Commit the change
-
-        ↓
-
-Push the branch
-
-        ↓
-
-The existing PR automatically updates
-
-The reviewer can then check the new changes.
-
-✅ 9. Merge the Pull Request
-
-Once the Pull Request has received the required approval:
-
-Check that the required approval is present.
-Check that there are no important problems.
-Click Merge pull request.
-Confirm the merge.
-
-The repository allows:
-
-Merge commit
-Squash and merge
-Rebase and merge
-
-If your team isn't sure which one to use, Squash and merge is a simple choice for many small hackathon changes.
-
-🚫 10. Don't Push Directly to Main
-
-Do not try to push directly to main.
-
-For example, this is not allowed:
-
-git push origin main
-
-Instead:
-
-Create branch
-      ↓
-Make changes
-      ↓
-Pull Request
-      ↓
-1 teammate approves
-      ↓
-Merge
-
-This protects everyone's work.
-
-🔥 11. Never Force-Push to Main
-
-Do not try to force-push to main.
-
-Avoid:
-
-git push --force
-
-The protected main branch is designed to prevent this.
-
-🔑 12. NEVER Upload Passwords or API Keys
-
-Very important.
-
-Never put these inside your repository:
-
-API keys
-Passwords
-Access tokens
-Private keys
-Database passwords
-.env files containing real secrets
-
-For example, do NOT commit:
-
-API_KEY=123456789abcdef
-
-inside a public repository.
-
-If you accidentally upload a secret:
-
-Tell the organizers immediately.
-
-Simply deleting the file may not be enough because the secret could still exist in Git history.
-
-📁 13. Keep the Repository Organized
-
-Try to keep the project clean.
-
-For example:
-
-project/
-│
-├── src/
-├── docs/
-├── tests/
-├── README.md
-├── requirements.txt
-└── .gitignore
-
-Don't upload unnecessary files such as:
-
-Huge videos
-Temporary files
-Build files
-Personal files
-Passwords
-IDE-specific junk
-
-Use .gitignore where appropriate.
-
-🏷️ 14. Use Clear Branch Names
-
-Good examples:
-
-feature-login
-feature-chatbot
-feature-dashboard
-fix-payment-error
-fix-camera-bug
-docs-installation
-
-Avoid names such as:
-
-test
-abc
-new
-branch1
-mybranch
-asdf
-
-A clear branch name makes teamwork easier.
-
-📝 15. Use Clear Commit Messages
-
-A commit message should tell your teammates what you changed.
-
-Good
-Add login page
-Fix camera initialization
-Add chatbot API
-Update project documentation
-Avoid
-changes
-update
-done
-final
-final2
-final-final
-
-Keep commit messages short and meaningful.
-
-🧑‍💻 16. Recommended Team Workflow
-
-For every new feature:
-
-1. Start from main
-        ↓
-2. Create a new branch
-        ↓
-3. Work on the feature
-        ↓
-4. Commit your changes
-        ↓
-5. Push the branch
-        ↓
-6. Create Pull Request
-        ↓
-7. Teammate reviews
-        ↓
-8. Get 1 approval
-        ↓
-9. Merge into main
-        ↓
-10. Start the next feature
-🆘 17. If You Get Stuck
-GitHub says your push was rejected
-
-Check that you are not trying to push directly to main.
-
-Create a branch instead.
-
-Your Pull Request cannot be merged
-
-Check whether:
-
-You have the required approval.
-There are merge conflicts.
-GitHub is showing another problem.
-You accidentally committed a secret
-
-Tell the organizers immediately.
-
-You don't understand Git
-
-That's okay.
-
-Ask your teammates or the Hack the Future 26 organizers for help.
-
-🏆 Hack the Future 26
-
-Build together. Review together. Ship together.
-
-Keep main stable.
-
-Work in branches.
-
-Use Pull Requests.
-
-Get your teammate's approval.
-
-Then merge.
-
-Happy hacking! 🚀
+**🎓 Campus Thrift — Buy. Sell. Borrow. Lend. Ride. Connect.**
