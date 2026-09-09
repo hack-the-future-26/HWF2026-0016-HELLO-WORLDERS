@@ -320,14 +320,15 @@ def get_recommendations(
     category: str,
     latitude: float,
     longitude: float,
+    radius: float = 5,
     db: Session = Depends(get_db),
 ):
     recs = []
-    for p in db.query(Product).all():
+    for p in db.query(Product).filter(Product.status == "active").all():
         if p.latitude is None or p.longitude is None:
             continue
         dist = haversine(latitude, longitude, p.latitude, p.longitude)
-        if dist > 10:
+        if dist > radius:
             continue
         score = 0
         if p.category.lower() == category.lower():
@@ -338,7 +339,7 @@ def get_recommendations(
         recs.append({**p.__dict__, "distance_km": round(dist, 2), "recommendation_score": score})
 
     recs.sort(key=lambda x: x["recommendation_score"], reverse=True)
-    return {"success": True, "category": category, "recommendations": recs[:5]}
+    return {"success": True, "category": category, "radius_km": radius, "recommendations": recs[:5]}
 
 
 # ── scam check ────────────────────────────────────────────────────────────────
