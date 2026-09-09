@@ -29,6 +29,8 @@ class Product(Base):
     image_url = Column(String(500), nullable=True)
     latitude = Column(Float, nullable=True)
     longitude = Column(Float, nullable=True)
+    status = Column(String(20), nullable=False, default="active")
+
 
 class Chat(Base):
     __tablename__ = "chats"
@@ -46,6 +48,7 @@ class Message(Base):
     chat_id = Column(Integer, nullable=False)
     sender_id = Column(Integer, nullable=False)
     message = Column(Text, nullable=False)
+
 
 class Wishlist(Base):
     __tablename__ = "wishlists"
