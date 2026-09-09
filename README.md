@@ -1,6 +1,13 @@
 # 🎓 Campus Thrift
 
-**Buy. Sell. Borrow. Lend. Ride. Connect.**
+<span align="center">
+  <img alt="Buy" src="https://img.shields.io/badge/Buy-4F46E5?style=for-the-badge&logo=shopping-cart&logoColor=white" />
+  <img alt="Sell" src="https://img.shields.io/badge/Sell-10B981?style=for-the-badge&logo=tag&logoColor=white" />
+  <img alt="Borrow" src="https://img.shields.io/badge/Borrow-F59E0B?style=for-the-badge&logo=book&logoColor=white" />
+  <img alt="Lend" src="https://img.shields.io/badge/Lend-8B5CF6?style=for-the-badge&logo=handshake&logoColor=white" />
+  <img alt="Ride" src="https://img.shields.io/badge/Ride-06B6D4?style=for-the-badge&logo=car&logoColor=white" />
+  <img alt="Connect" src="https://img.shields.io/badge/Connect-EC4899?style=for-the-badge&logo=chat&logoColor=white" />
+</span>
 
 A student-focused platform for buying, selling, borrowing, lending, and sharing within the campus community.
 
@@ -8,28 +15,23 @@ A student-focused platform for buying, selling, borrowing, lending, and sharing 
 
 ## 🌟 Overview
 
-Campus Thrift is a campus-based platform that connects students with other students to exchange useful items and services. It helps students save money by making it easier to:
+Campus Thrift is a campus-based platform that connects students to exchange useful items and services. It helps students save money by making it easier to:
 
 - Find affordable second-hand items  
-- Borrow things for temporary use  
+- Borrow items for temporary use  
 - Sell unused belongings  
+- Lend useful items to other students  
 - Share rides with fellow students  
 
 ---
 
 ## ❗ Problem
 
-College students often need items such as:
-
-- Textbooks  
-- Calculators  
-- Lab coats  
-- Drawing boards, drafters  
-- Other academic essentials  
+College students often need items such as textbooks, calculators, lab coats, drawing boards, drafters, and other academic essentials.
 
 Buying these items new can be expensive, especially when they are only needed for a short period.
 
-Students also travel to similar destinations every day but may not know other students going the same way.
+Students also travel to similar destinations but may not know other students going the same way.
 
 Campus Thrift brings these needs together in one student-focused platform.
 
@@ -51,6 +53,15 @@ Campus Thrift allows students to:
 ---
 
 ## ✨ Key Features
+
+| Feature              | Description                                                  |
+|----------------------|--------------------------------------------------------------|
+| 🛒 Buy & Sell        | Buy affordable items or sell things you no longer need       |
+| 📚 Borrow & Lend     | Borrow items temporarily or lend them to other students      |
+| 🚗 Campus Rides      | Offer and request rides with a shared fare                   |
+| 🔍 Search & Discovery| Find relevant items and available rides                      |
+| 💬 Messaging         | Connect with other students about listings and rides         |
+| 👤 User Profiles     | Manage personal information and platform activity            |
 
 ### 🛒 Buy & Sell
 
@@ -90,7 +101,7 @@ Students can search for items and rides and discover relevant listings based on 
 
 ### 💬 Messaging
 
-Students can communicate with sellers, borrowers, lenders, and ride providers to discuss listings, availability, pickup points, and other details.
+Students can communicate with other users to discuss listings, availability, pickup points, ride details, and other requirements.
 
 ### 👤 User Profiles
 
@@ -119,14 +130,94 @@ Campus Thrift is designed primarily for:
 
 ---
 
-## 🛠 Technology Stack
+## 🛠️ Technology Stack
 
-- React  
-- Vite  
-- JavaScript  
-- CSS  
-- Git  
-- GitHub  
+- **Frontend:** React, TypeScript, Vite, Tailwind CSS  
+- **Backend:** Python  
+- **Version Control:** Git, GitHub  
+
+---
+
+## 📁 Project Structure
+
+```text
+HWF2026-0016-HELLO-WORLDERS/
+│
+├── backend/
+│   ├── main.py
+│   ├── migrate.py
+│   ├── models.py
+│   ├── schemas.py
+│   ├── seed.py
+│   ├── reseed.py
+│   ├── requirements.txt
+│   └── .gitignore
+│
+├── frontend/
+│   └── Campus_Thrift/
+│       │
+│       ├── public/
+│       │   ├── favicon.svg
+│       │   └── icons.svg
+│       │
+│       ├── src/
+│       │   ├── assets/
+│       │   ├── components/
+│       │   ├── context/
+│       │   ├── data/
+│       │   ├── pages/
+│       │   ├── services/
+│       │   ├── types/
+│       │   ├── App.css
+│       │   ├── App.tsx
+│       │   ├── index.css
+│       │   └── main.tsx
+│       │
+│       ├── .gitignore
+│       ├── .oxlintrc.json
+│       ├── index.html
+│       ├── package.json
+│       ├── package-lock.json
+│       ├── postcss.config.js
+│       ├── tailwind.config.js
+│       ├── tsconfig.json
+│       ├── tsconfig.app.json
+│       ├── tsconfig.node.json
+│       ├── vite.config.ts
+│       ├── README.md
+│       └── walkthrough.md
+│
+├── peer-to-peer.png
+└── README.md
+```
+
+### Backend
+
+The `backend/` directory contains the server-side application, data models, schemas, migration utilities, seed data, and dependency configuration.
+
+### Frontend
+
+The `frontend/Campus_Thrift/` directory contains the React and TypeScript application.
+
+The `src/` directory is organized into:
+
+- `components/` — Reusable UI components  
+- `pages/` — Application pages  
+- `assets/` — Images and other assets  
+- `context/` — Shared application state  
+- `data/` — Application data  
+- `services/` — API and service logic  
+- `types/` — TypeScript type definitions  
+
+---
+
+## 📚 Documentation
+
+Project documentation and system design materials:
+
+- Software Requirements Specification (SRS)  
+- Data Flow Diagrams (DFD)  
+- System design diagrams  
 
 ---
 
