@@ -31,7 +31,6 @@ class Product(Base):
     longitude = Column(Float, nullable=True)
     status = Column(String(20), nullable=False, default="active")
 
-
 class Chat(Base):
     __tablename__ = "chats"
 

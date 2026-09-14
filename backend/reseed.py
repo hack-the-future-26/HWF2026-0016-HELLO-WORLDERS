@@ -1,7 +1,7 @@
 """Clear demo data and re-run seed. Use when you want a fresh app state."""
 import os
 from dotenv import load_dotenv
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 from sqlalchemy.orm import Session
 from models import Chat, Message, Product, User, Wishlist
 
