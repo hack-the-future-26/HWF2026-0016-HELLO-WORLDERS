@@ -38,3 +38,24 @@ class ScamCheckRequest(BaseModel):
 class WishlistCreate(BaseModel):
     user_id: int
     product_id: int
+
+
+class RideCreate(BaseModel):
+    driver_id: int
+    from_location: str
+    to_location: str
+    date: str
+    departure_time: str
+    price: float
+    total_seats: int
+    vehicle_info: str
+    notes: Optional[str] = None
+
+
+class RideRequestCreate(BaseModel):
+    requester_id: int
+    seats_requested: int = 1
+
+
+class NotificationReadUpdate(BaseModel):
+    is_read: bool = True

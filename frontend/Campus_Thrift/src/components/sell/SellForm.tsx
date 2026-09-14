@@ -339,7 +339,7 @@ export const SellForm: React.FC = () => {
             disabled={isCheckingRisk}
             className="px-6 py-2.5 rounded-xl text-sm font-semibold bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm transition-colors"
           >
-            {isCheckingRisk ? 'Checking risk…' : 'Review \&amp; Publish'}
+            {isCheckingRisk ? 'Checking risk…' : 'Review & Publish'}
           </button>
         </div>
       </form>

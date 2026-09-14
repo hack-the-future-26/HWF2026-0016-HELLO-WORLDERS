@@ -71,7 +71,7 @@ export interface Message {
   offerAmount?: number;
 }
 
-export type NotificationType = 'message' | 'offer' | 'listing_update' | 'safety';
+export type NotificationType = 'message' | 'offer' | 'listing_update' | 'safety' | 'ride_request';
 
 export interface Notification {
   id: string;

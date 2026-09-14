@@ -4,13 +4,13 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import Session
 from dotenv import load_dotenv
-from schemas import ProductCreate,UserCreate,ChatCreate,MessageCreate,ScamCheckRequest,WishlistCreate
+from schemas import ProductCreate,UserCreate,ChatCreate,MessageCreate,ScamCheckRequest,WishlistCreate,RideCreate,RideRequestCreate,NotificationReadUpdate
 import os
 import shutil
 import math
 import uuid
 
-from models import Base, Product, User, Chat, Message, Wishlist
+from models import Base, Product, User, Chat, Message, Wishlist, Ride, RideRequest, Notification
 
 load_dotenv()
 
@@ -67,6 +67,39 @@ def validate_edu_email(email: str):
             status_code=400,
             detail="Only verified university .edu email addresses are accepted (e.g. name@iitd.edu).",
         )
+
+
+def serialize_ride(ride: Ride, driver: User | None):
+    return {
+        "id": ride.id,
+        "driver_id": ride.driver_id,
+        "driver_name": driver.name if driver else "Campus student",
+        "driver_avatar": f"https://ui-avatars.com/api/?name={(driver.name if driver else 'Campus Student').replace(' ', '+')}&background=059669&color=fff&size=200",
+        "driver_rating": 5.0,
+        "driver_verified": bool(driver and driver.verified),
+        "from": ride.from_location,
+        "to": ride.to_location,
+        "date": ride.date,
+        "departure_time": ride.departure_time,
+        "price": ride.price,
+        "available_seats": ride.available_seats,
+        "total_seats": ride.total_seats,
+        "vehicle_info": ride.vehicle_info,
+        "notes": ride.notes,
+    }
+
+
+def serialize_notification(notification: Notification):
+    return {
+        "id": str(notification.id),
+        "user_id": str(notification.user_id),
+        "type": notification.notification_type,
+        "title": notification.title,
+        "body": notification.body,
+        "timestamp": notification.created_at.isoformat(),
+        "is_read": notification.is_read,
+        "link": notification.link,
+    }
 
 
 # ── root / health ─────────────────────────────────────────────────────────────
@@ -415,6 +448,106 @@ def get_messages(chat_id: int, db: Session = Depends(get_db)):
         .all()
     )
     return {"success": True, "chat_id": chat_id, "messages": msgs}
+
+
+# ── rides and ride requests ──────────────────────────────────────────────────
+
+@app.get("/rides")
+def get_rides(db: Session = Depends(get_db)):
+    rides = db.query(Ride).filter(Ride.status == "active").order_by(Ride.id.desc()).all()
+    return [serialize_ride(ride, db.query(User).filter(User.id == ride.driver_id).first()) for ride in rides]
+
+
+@app.post("/rides")
+def create_ride(ride: RideCreate, db: Session = Depends(get_db)):
+    driver = db.query(User).filter(User.id == ride.driver_id).first()
+    if not driver:
+        raise HTTPException(status_code=404, detail="Driver user not found")
+    if ride.total_seats < 1:
+        raise HTTPException(status_code=400, detail="A ride must have at least one seat")
+    if ride.price < 0:
+        raise HTTPException(status_code=400, detail="Ride price cannot be negative")
+
+    new_ride = Ride(
+        driver_id=ride.driver_id,
+        from_location=ride.from_location,
+        to_location=ride.to_location,
+        date=ride.date,
+        departure_time=ride.departure_time,
+        price=ride.price,
+        total_seats=ride.total_seats,
+        available_seats=ride.total_seats,
+        vehicle_info=ride.vehicle_info,
+        notes=ride.notes,
+    )
+    db.add(new_ride)
+    db.commit()
+    db.refresh(new_ride)
+    return {"success": True, "ride": serialize_ride(new_ride, driver)}
+
+
+@app.post("/rides/{ride_id}/requests")
+def request_ride(ride_id: int, request: RideRequestCreate, db: Session = Depends(get_db)):
+    ride = db.query(Ride).filter(Ride.id == ride_id, Ride.status == "active").first()
+    requester = db.query(User).filter(User.id == request.requester_id).first()
+    if not ride:
+        raise HTTPException(status_code=404, detail="Ride not found")
+    if not requester:
+        raise HTTPException(status_code=404, detail="Requester user not found")
+    if ride.driver_id == request.requester_id:
+        raise HTTPException(status_code=400, detail="You cannot request your own ride")
+    if request.seats_requested < 1 or request.seats_requested > ride.available_seats:
+        raise HTTPException(status_code=400, detail="Requested seats are not available")
+    existing = db.query(RideRequest).filter(
+        RideRequest.ride_id == ride_id,
+        RideRequest.requester_id == request.requester_id,
+        RideRequest.status == "pending",
+    ).first()
+    if existing:
+        raise HTTPException(status_code=409, detail="You already requested this ride")
+
+    ride_request = RideRequest(
+        ride_id=ride_id,
+        requester_id=request.requester_id,
+        seats_requested=request.seats_requested,
+    )
+    ride.available_seats -= request.seats_requested
+    notification = Notification(
+        user_id=ride.driver_id,
+        notification_type="ride_request",
+        title="New carpool ride request",
+        body=f"{requester.name} requested {request.seats_requested} seat(s) for your ride from {ride.from_location} to {ride.to_location}.",
+        link=f"/rides/{ride.id}/requests",
+    )
+    db.add(ride_request)
+    db.add(notification)
+    db.commit()
+    db.refresh(ride_request)
+    return {"success": True, "message": "Ride owner notified", "request": ride_request}
+
+
+@app.get("/notifications/{user_id}")
+def get_notifications(user_id: int, db: Session = Depends(get_db)):
+    notifications = db.query(Notification).filter(Notification.user_id == user_id).order_by(Notification.created_at.desc()).all()
+    return [serialize_notification(notification) for notification in notifications]
+
+
+@app.patch("/notifications/{notification_id}/read")
+def mark_notification_read(notification_id: int, update: NotificationReadUpdate, db: Session = Depends(get_db)):
+    notification = db.query(Notification).filter(Notification.id == notification_id).first()
+    if not notification:
+        raise HTTPException(status_code=404, detail="Notification not found")
+    notification.is_read = update.is_read
+    db.commit()
+    db.refresh(notification)
+    return serialize_notification(notification)
+
+
+@app.patch("/notifications/read-all/{user_id}")
+def mark_all_notifications_read(user_id: int, db: Session = Depends(get_db)):
+    db.query(Notification).filter(Notification.user_id == user_id, Notification.is_read == False).update({Notification.is_read: True})
+    db.commit()
+    return {"success": True}
 
 
 # ── recommendations ───────────────────────────────────────────────────────────

@@ -7,7 +7,7 @@ import os, sys
 from dotenv import load_dotenv
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
-from models import Base, User, Product
+from models import Base, User, Product, Ride
 
 load_dotenv()
 engine = create_engine(os.getenv("DATABASE_URL"))
@@ -145,6 +145,31 @@ PRODUCTS = [
     },
 ]
 
+RIDES = [
+    {
+        "driver": 0,
+        "from_location": "IIT Delhi Gate No. 1, Hauz Khas",
+        "to_location": "Connaught Place, New Delhi",
+        "date": "Sat, 19 Sep 2026",
+        "departure_time": "11:00 AM",
+        "price": 120.0,
+        "total_seats": 4,
+        "vehicle_info": "Hyundai i20 (Grey) - AC",
+        "notes": "Can drop near Rajiv Chowk Metro.",
+    },
+    {
+        "driver": 2,
+        "from_location": "IIT Bombay Main Gate, Powai",
+        "to_location": "Andheri Railway Station",
+        "date": "Sun, 20 Sep 2026",
+        "departure_time": "5:30 PM",
+        "price": 80.0,
+        "total_seats": 4,
+        "vehicle_info": "Maruti Swift (White) - space for 2 bags",
+        "notes": "Fuel split only. Please be punctual.",
+    },
+]
+
 with Session(engine) as db:
     # Seed users
     user_ids: list[int] = []
@@ -185,5 +210,24 @@ with Session(engine) as db:
             ))
         db.commit()
         print(f"\n[ok] Seeded {len(PRODUCTS)} products.")
+
+    if db.query(Ride).count() == 0:
+        for ride in RIDES:
+            db.add(Ride(
+                driver_id=user_ids[ride["driver"]],
+                from_location=ride["from_location"],
+                to_location=ride["to_location"],
+                date=ride["date"],
+                departure_time=ride["departure_time"],
+                price=ride["price"],
+                total_seats=ride["total_seats"],
+                available_seats=ride["total_seats"],
+                vehicle_info=ride["vehicle_info"],
+                notes=ride["notes"],
+            ))
+        db.commit()
+        print(f"[ok] Seeded {len(RIDES)} rides.")
+    else:
+        print(f"Rides already in DB ({db.query(Ride).count()} rows). Skipping ride seed.")
 
 print("\nDone!")

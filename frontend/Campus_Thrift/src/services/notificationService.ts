@@ -1,5 +1,6 @@
 import { Notification } from '../types';
 import { mockNotifications } from '../data/mockData';
+import { api } from './api';
 
 const LOCAL_NOTIFS_KEY = 'campus_thrift_notifications';
 
@@ -29,13 +30,21 @@ class NotificationService {
 
   // TODO: [Backend Integration] Replace with GET /api/notifications
   public async getNotifications(userId: string): Promise<Notification[]> {
-    return this.notifications
-      .filter(n => n.userId === userId)
-      .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+    try {
+      return await api.get<Notification[]>(`/notifications/${userId}`);
+    } catch {
+      return this.notifications
+        .filter(n => n.userId === userId)
+        .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+    }
   }
 
   // TODO: [Backend Integration] Replace with PATCH /api/notifications/:id/read
   public async markAsRead(notificationId: string): Promise<void> {
+    try {
+      await api.patch(`/notifications/${notificationId}/read`, { is_read: true });
+      return;
+    } catch { /* use local demo state when the API is unavailable */ }
     const notif = this.notifications.find(n => n.id === notificationId);
     if (notif) {
       notif.isRead = true;
@@ -45,6 +54,10 @@ class NotificationService {
 
   // TODO: [Backend Integration] Replace with PATCH /api/notifications/read-all
   public async markAllAsRead(userId: string): Promise<void> {
+    try {
+      await api.patch(`/notifications/read-all/${userId}`, {});
+      return;
+    } catch { /* use local demo state when the API is unavailable */ }
     this.notifications
       .filter(n => n.userId === userId)
       .forEach(n => {

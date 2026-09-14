@@ -3,6 +3,7 @@ import { PlusCircle, Info, ShieldCheck, Car, X } from 'lucide-react';
 import { Ride } from '../types';
 import { rideService } from '../services/rideService';
 import { RideCard } from '../components/rides/RideCard';
+import { useAuth } from '../context/AuthContext';
 
 type FilterId = 'all' | 'city' | 'intercity';
 
@@ -16,8 +17,57 @@ export const RidesPage: React.FC = () => {
   const [rides, setRides] = useState<Ride[]>([]);
   const [filter, setFilter] = useState<FilterId>('all');
   const [notice, setNotice] = useState<string | null>(null);
+  const [showOfferForm, setShowOfferForm] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { user } = useAuth();
+  const [form, setForm] = useState({
+    from_location: '', to_location: '', date: '', departure_time: '',
+    price: '', total_seats: '1', vehicle_info: '', notes: '',
+  });
 
   useEffect(() => { rideService.getRides().then(setRides); }, []);
+
+  const updateForm = (field: keyof typeof form, value: string) => {
+    setForm(current => ({ ...current, [field]: value }));
+  };
+
+  const handleCreateRide = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!user) return;
+    setIsSubmitting(true);
+    try {
+      const ride = await rideService.createRide({
+        driver_id: Number(user.id),
+        from_location: form.from_location,
+        to_location: form.to_location,
+        date: form.date,
+        departure_time: form.departure_time,
+        price: Number(form.price),
+        total_seats: Number(form.total_seats),
+        vehicle_info: form.vehicle_info,
+        notes: form.notes || undefined,
+      });
+      setRides(current => [ride, ...current]);
+      setShowOfferForm(false);
+      setForm({ from_location: '', to_location: '', date: '', departure_time: '', price: '', total_seats: '1', vehicle_info: '', notes: '' });
+      setNotice('Your carpool ride is live. Other students can now request a seat.');
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : 'Could not create the ride.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleJoinRide = async (ride: Ride) => {
+    if (!user) return;
+    try {
+      await rideService.requestRide(ride.id, user.id);
+      setRides(current => current.map(item => item.id === ride.id ? { ...item, availableSeats: item.availableSeats - 1 } : item));
+      setNotice(`${ride.driverName} has been notified of your request. Please wait for their confirmation.`);
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : 'Could not request this ride.');
+    }
+  };
 
   const filtered = rides.filter(r => {
     if (filter === 'all') return true;
@@ -50,9 +100,7 @@ export const RidesPage: React.FC = () => {
           <div className="pt-3">
             <button
               type="button"
-              onClick={() =>
-                setNotice('Ride posting feature will be available soon! Meanwhile, you can message drivers directly to join their rides.')
-              }
+              onClick={() => setShowOfferForm(current => !current)}
               className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white text-emerald-900 font-bold text-xs hover:bg-emerald-50 transition-colors shadow"
             >
               <PlusCircle className="w-4 h-4 text-emerald-600" />
@@ -62,6 +110,46 @@ export const RidesPage: React.FC = () => {
         </div>
         <div className="absolute right-0 bottom-0 translate-x-8 translate-y-8 w-60 h-60 rounded-full bg-emerald-500/10 blur-2xl pointer-events-none" />
       </div>
+
+      {showOfferForm && (
+        <form onSubmit={handleCreateRide} className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-emerald-200 dark:border-emerald-800 shadow-sm space-y-4">
+          <div>
+            <h2 className="text-base font-bold text-slate-900 dark:text-white">Offer a carpool ride</h2>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Add the trip details students need before requesting a seat.</p>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {([
+              ['from_location', 'Pickup location', 'text'],
+              ['to_location', 'Drop-off location', 'text'],
+              ['date', 'Travel date', 'date'],
+              ['departure_time', 'Departure time', 'time'],
+              ['price', 'Price per seat (₹)', 'number'],
+              ['total_seats', 'Available seats', 'number'],
+              ['vehicle_info', 'Vehicle details', 'text'],
+            ] as const).map(([field, label, type]) => (
+              <label key={field} className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                {label}
+                <input
+                  required
+                  type={type}
+                  min={type === 'number' ? 1 : undefined}
+                  value={form[field]}
+                  onChange={event => updateForm(field, event.target.value)}
+                  className="mt-1 w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm font-normal text-slate-900 dark:text-white outline-none focus:border-emerald-500"
+                />
+              </label>
+            ))}
+            <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 sm:col-span-2">
+              Notes (optional)
+              <textarea value={form.notes} onChange={event => updateForm('notes', event.target.value)} rows={2} className="mt-1 w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm font-normal text-slate-900 dark:text-white outline-none focus:border-emerald-500" />
+            </label>
+          </div>
+          <div className="flex justify-end gap-2">
+            <button type="button" onClick={() => setShowOfferForm(false)} className="px-3 py-2 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-300">Cancel</button>
+            <button disabled={isSubmitting} type="submit" className="px-4 py-2 rounded-xl bg-emerald-600 text-white text-xs font-bold disabled:opacity-50">{isSubmitting ? 'Posting...' : 'Post ride'}</button>
+          </div>
+        </form>
+      )}
 
       {/* Notice */}
       {notice && (
@@ -109,11 +197,7 @@ export const RidesPage: React.FC = () => {
             <RideCard
               key={ride.id}
               ride={ride}
-              onJoinClick={r =>
-                setNotice(
-                  `${r.driverName} has been notified of your interest to join this ride. Please wait for their confirmation.`,
-                )
-              }
+              onJoinClick={handleJoinRide}
             />
           ))}
         </div>
