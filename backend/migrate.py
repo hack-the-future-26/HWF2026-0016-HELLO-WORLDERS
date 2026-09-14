@@ -10,5 +10,8 @@ with engine.connect() as conn:
     conn.execute(text(
         "ALTER TABLE products ADD COLUMN IF NOT EXISTS status VARCHAR(20) NOT NULL DEFAULT 'active'"
     ))
+    conn.execute(text(
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS password_hash VARCHAR(255)"
+    ))
     conn.commit()
-    print("Migration complete: status column ensured on products.")
+    print("Migration complete: status on products and password_hash on users ensured.")

@@ -5,7 +5,9 @@ import { authService } from '../services/authService';
 interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
-  /** Register or log in with name + email + college. Throws on error. */
+  login: (email: string, password: string) => Promise<void>;
+  register: (name: string, email: string, password: string, college?: string) => Promise<void>;
+  /** Register or log in with name + email + college (legacy fallback). Throws on error. */
   registerOrLogin: (name: string, email: string, college: string) => Promise<void>;
   logout: () => void;
 }
@@ -19,6 +21,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     setUser(authService.getCurrentUser());
   }, []);
+
+  const login = async (email: string, password: string) => {
+    const loggedIn = await authService.login(email, password);
+    setUser(loggedIn);
+  };
+
+  const register = async (name: string, email: string, password: string, college?: string) => {
+    const loggedIn = await authService.register(name, email, password, college);
+    setUser(loggedIn);
+  };
 
   const registerOrLogin = async (name: string, email: string, college: string) => {
     const loggedIn = await authService.registerOrLogin(name, email, college);
@@ -35,6 +47,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       value={{
         user,
         isAuthenticated: !!user,
+        login,
+        register,
         registerOrLogin,
         logout,
       }}

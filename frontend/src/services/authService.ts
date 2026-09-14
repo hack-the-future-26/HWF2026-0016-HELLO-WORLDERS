@@ -1,18 +1,11 @@
 import { User } from '../types';
-import { api, BackendUser } from './api';
+import { api, BackendUser, AUTH_TOKEN_KEY } from './api';
 import { mapBackendUser } from './productService';
 
 const SESSION_KEY = 'campus_thrift_active_user';
 
 /**
- * Auth Service — backed by the real FastAPI backend.
- *
- * Since the backend has no password auth, we use the "register-or-login"
- * pattern: POST /users/register returns the existing user if the email
- * already exists, so calling it acts as both sign-up and sign-in.
- *
- * The logged-in user object is persisted to localStorage so page
- * refreshes keep the session alive.
+ * Auth Service — backed by JWT authentication on FastAPI.
  */
 class AuthService {
   private currentUser: User | null = null;
@@ -20,8 +13,11 @@ class AuthService {
   constructor() {
     try {
       const stored = localStorage.getItem(SESSION_KEY);
-      if (stored) {
+      const token = localStorage.getItem(AUTH_TOKEN_KEY);
+      if (stored && token) {
         this.currentUser = JSON.parse(stored) as User;
+      } else {
+        this.currentUser = null;
       }
     } catch {
       this.currentUser = null;
@@ -29,7 +25,62 @@ class AuthService {
   }
 
   // -----------------------------------------------------------------------
-  // Register or login with email — returns the User on success
+  // Login with email and password via JWT
+  // -----------------------------------------------------------------------
+  public async login(email: string, password: string): Promise<User> {
+    const res = await api.post<{
+      access_token: string;
+      token_type: string;
+      user: BackendUser;
+    }>('/auth/login', { email, password });
+
+    if (!res.access_token || !res.user) {
+      throw new Error('Authentication failed');
+    }
+
+    try {
+      localStorage.setItem(AUTH_TOKEN_KEY, res.access_token);
+    } catch {
+      /* ignore */
+    }
+
+    const user = mapBackendUser(res.user);
+    this.setSession(user);
+    return user;
+  }
+
+  // -----------------------------------------------------------------------
+  // Register with email and password via JWT
+  // -----------------------------------------------------------------------
+  public async register(
+    name: string,
+    email: string,
+    password: string,
+    college?: string,
+  ): Promise<User> {
+    const res = await api.post<{
+      access_token: string;
+      token_type: string;
+      user: BackendUser;
+    }>('/auth/register', { name, email, password, college });
+
+    if (!res.access_token || !res.user) {
+      throw new Error('Registration failed');
+    }
+
+    try {
+      localStorage.setItem(AUTH_TOKEN_KEY, res.access_token);
+    } catch {
+      /* ignore */
+    }
+
+    const user = mapBackendUser(res.user);
+    this.setSession(user);
+    return user;
+  }
+
+  // -----------------------------------------------------------------------
+  // Backward compatibility: Register or login with email
   // -----------------------------------------------------------------------
   public async registerOrLogin(
     name: string,
@@ -66,14 +117,23 @@ class AuthService {
     return this.currentUser;
   }
 
+  public getToken(): string | null {
+    try {
+      return localStorage.getItem(AUTH_TOKEN_KEY);
+    } catch {
+      return null;
+    }
+  }
+
   public isAuthenticated(): boolean {
-    return this.currentUser !== null;
+    return this.currentUser !== null && !!this.getToken();
   }
 
   public logout(): void {
     this.currentUser = null;
     try {
       localStorage.removeItem(SESSION_KEY);
+      localStorage.removeItem(AUTH_TOKEN_KEY);
     } catch {
       /* ignore */
     }
@@ -85,9 +145,8 @@ class AuthService {
   public async refreshCurrentUser(): Promise<User | null> {
     if (!this.currentUser) return null;
     try {
-      const u = await api.get<BackendUser>(`/users/${this.currentUser.id}`);
+      const u = await api.get<BackendUser>('/auth/me');
       const refreshed = mapBackendUser(u);
-      // Preserve the avatar from mock so it looks nice
       refreshed.avatar = this.currentUser.avatar;
       this.setSession(refreshed);
       return refreshed;
