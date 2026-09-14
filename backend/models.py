@@ -15,6 +15,7 @@ class User(Base):
     verified = Column(Boolean, default=False)
     latitude = Column(Float, nullable=True)
     longitude = Column(Float, nullable=True)
+    password_hash = Column(String(255), nullable=True)
 
 
 class Product(Base):

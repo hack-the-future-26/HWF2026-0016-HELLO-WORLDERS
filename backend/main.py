@@ -1,10 +1,30 @@
-from fastapi import FastAPI, Depends, Query, UploadFile, File, Form, HTTPException
+from typing import Optional
+from fastapi import FastAPI, Depends, Query, UploadFile, File, Form, HTTPException, status as http_status
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import Session
 from dotenv import load_dotenv
-from schemas import ProductCreate,UserCreate,ChatCreate,MessageCreate,ScamCheckRequest,WishlistCreate,RideCreate,RideRequestCreate,NotificationReadUpdate
+from schemas import (
+    ProductCreate,
+    UserCreate,
+    ChatCreate,
+    MessageCreate,
+    ScamCheckRequest,
+    WishlistCreate,
+    UserRegister,
+    UserLogin,
+    TokenResponse,
+    RideCreate,
+    RideRequestCreate,
+    NotificationReadUpdate,
+)
+from auth import (
+    hash_password,
+    verify_password,
+    create_access_token,
+    get_current_user,
+)
 import os
 import shutil
 import math
@@ -18,9 +38,8 @@ DATABASE_URL = os.getenv("DATABASE_URL")
 engine = create_engine(DATABASE_URL)
 Base.metadata.create_all(bind=engine)
 
-app = FastAPI(title="Campus Thrift API")
-
 os.makedirs("uploads", exist_ok=True)
+app = FastAPI(title="Campus Thrift API")
 app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
 # Allow Vite dev server (port 5173) and any other origins for hackathon
@@ -122,17 +141,19 @@ def health_check():
 # ── products ──────────────────────────────────────────────────────────────────
 @app.post("/products")
 def create_product(
-    seller_id: int = Form(...),
     title: str = Form(...),
     category: str = Form(...),
     price: float = Form(...),
     condition: str = Form(...),
+    seller_id: Optional[int] = Form(None),
     description: str = Form(None),
     latitude: float = Form(None),
     longitude: float = Form(None),
     image: UploadFile = File(None),
+    current_user_payload: dict = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    authenticated_seller_id = int(current_user_payload["sub"])
     image_url = None
 
     if image and image.filename:
@@ -147,7 +168,7 @@ def create_product(
         image_url = f"/uploads/{unique_name}"
 
     new_product = Product(
-        seller_id=seller_id,
+        seller_id=authenticated_seller_id,
         title=title,
         category=category,
         price=price,
@@ -215,11 +236,17 @@ def get_product(product_id: int, db: Session = Depends(get_db)):
 def update_product_status(
     product_id: int,
     status: str = Query(..., pattern="^(active|sold)$"),
+    current_user_payload: dict = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     product = db.query(Product).filter(Product.id == product_id).first()
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
+    if product.seller_id != int(current_user_payload["sub"]):
+        raise HTTPException(
+            status_code=http_status.HTTP_403_FORBIDDEN,
+            detail="You do not have permission to update this product.",
+        )
     product.status = status
     db.commit()
     db.refresh(product)
@@ -227,13 +254,110 @@ def update_product_status(
 
 
 @app.delete("/products/{product_id}")
-def delete_product(product_id: int, db: Session = Depends(get_db)):
+def delete_product(
+    product_id: int,
+    current_user_payload: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
     product = db.query(Product).filter(Product.id == product_id).first()
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
+    if product.seller_id != int(current_user_payload["sub"]):
+        raise HTTPException(
+            status_code=http_status.HTTP_403_FORBIDDEN,
+            detail="You do not have permission to delete this product.",
+        )
     db.delete(product)
     db.commit()
     return {"success": True, "message": "Product deleted."}
+
+
+# ---------------------------------------------------------------------------
+# Authentication (JWT)
+# ---------------------------------------------------------------------------
+
+@app.post("/auth/register", response_model=TokenResponse)
+def register(user_data: UserRegister, db: Session = Depends(get_db)):
+    """Register a new student with email and password, returning a JWT token."""
+    existing_user = db.query(User).filter(User.email == user_data.email.strip().lower()).first()
+    if existing_user:
+        raise HTTPException(
+            status_code=http_status.HTTP_400_BAD_REQUEST,
+            detail="An account with this email already exists.",
+        )
+
+    hashed_pw = hash_password(user_data.password)
+    new_user = User(
+        name=user_data.name.strip(),
+        email=user_data.email.strip().lower(),
+        college=user_data.college.strip() if user_data.college else "Campus University",
+        verified=True,
+        latitude=user_data.latitude,
+        longitude=user_data.longitude,
+        password_hash=hashed_pw,
+    )
+    db.add(new_user)
+    db.commit()
+    db.refresh(new_user)
+
+    token = create_access_token(data={"sub": str(new_user.id), "email": new_user.email})
+    return {
+        "access_token": token,
+        "token_type": "bearer",
+        "user": {
+            "id": new_user.id,
+            "name": new_user.name,
+            "email": new_user.email,
+            "college": new_user.college,
+            "verified": new_user.verified,
+        },
+    }
+
+
+@app.post("/auth/login", response_model=TokenResponse)
+def login(credentials: UserLogin, db: Session = Depends(get_db)):
+    """Authenticate a student with email and password, returning a JWT token."""
+    user = db.query(User).filter(User.email == credentials.email.strip().lower()).first()
+    if not user or not verify_password(credentials.password, user.password_hash):
+        raise HTTPException(
+            status_code=http_status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid email or password.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    token = create_access_token(data={"sub": str(user.id), "email": user.email})
+    return {
+        "access_token": token,
+        "token_type": "bearer",
+        "user": {
+            "id": user.id,
+            "name": user.name,
+            "email": user.email,
+            "college": user.college,
+            "verified": user.verified,
+        },
+    }
+
+
+@app.get("/auth/me")
+def get_current_user_profile(
+    current_user_payload: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Retrieve profile of the currently authenticated user."""
+    user_id = int(current_user_payload.get("sub"))
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=http_status.HTTP_404_NOT_FOUND, detail="User not found.")
+    return {
+        "id": user.id,
+        "name": user.name,
+        "email": user.email,
+        "college": user.college,
+        "verified": user.verified,
+        "latitude": user.latitude,
+        "longitude": user.longitude,
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -242,9 +366,6 @@ def delete_product(product_id: int, db: Session = Depends(get_db)):
 
 @app.post("/users/register")
 def register_user(user: UserCreate, db: Session = Depends(get_db)):
-    if "@" not in user.email or ".edu" not in user.email.lower():
-        return {"success": False, "message": "Only verified university .edu email addresses are accepted."}
-
     existing_user = db.query(User).filter(User.email == user.email).first()
     if existing_user:
         # Return existing user so the frontend can log in
@@ -254,6 +375,7 @@ def register_user(user: UserCreate, db: Session = Depends(get_db)):
             "user": existing_user,
         }
 
+    password_hash = hash_password(user.password) if user.password else None
     new_user = User(
         name=user.name,
         email=user.email,
@@ -261,6 +383,7 @@ def register_user(user: UserCreate, db: Session = Depends(get_db)):
         verified=True,
         latitude=user.latitude,
         longitude=user.longitude,
+        password_hash=password_hash,
     )
     db.add(new_user)
     db.commit()
@@ -342,10 +465,15 @@ def get_user(user_id: int, db: Session = Depends(get_db)):
 # ---------------------------------------------------------------------------
 
 @app.post("/chats")
-def create_chat(chat: ChatCreate, db: Session = Depends(get_db)):
+def create_chat(
+    chat: ChatCreate,
+    current_user_payload: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    buyer_id = int(current_user_payload["sub"])
     existing_chat = db.query(Chat).filter(
         Chat.product_id == chat.product_id,
-        Chat.buyer_id == chat.buyer_id,
+        Chat.buyer_id == buyer_id,
         Chat.seller_id == chat.seller_id,
     ).first()
     if existing_chat:
@@ -353,7 +481,7 @@ def create_chat(chat: ChatCreate, db: Session = Depends(get_db)):
 
     new_chat = Chat(
         product_id=chat.product_id,
-        buyer_id=chat.buyer_id,
+        buyer_id=buyer_id,
         seller_id=chat.seller_id,
     )
     db.add(new_chat)
@@ -363,10 +491,23 @@ def create_chat(chat: ChatCreate, db: Session = Depends(get_db)):
 
 
 @app.get("/chats")
-def get_user_chats(user_id: int, db: Session = Depends(get_db)):
+@app.get("/chats/{user_id}")
+def get_user_chats(
+    user_id: Optional[int] = None,
+    current_user_payload: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
     """Return all chats where the given user is either buyer or seller."""
+    auth_user_id = int(current_user_payload["sub"])
+    if user_id is not None and user_id != auth_user_id:
+        raise HTTPException(
+            status_code=http_status.HTTP_403_FORBIDDEN,
+            detail="You do not have permission to view another user's chats.",
+        )
+
+    target_user_id = auth_user_id
     chats = db.query(Chat).filter(
-        (Chat.buyer_id == user_id) | (Chat.seller_id == user_id)
+        (Chat.buyer_id == target_user_id) | (Chat.seller_id == target_user_id)
     ).all()
 
     result = []
@@ -380,7 +521,7 @@ def get_user_chats(user_id: int, db: Session = Depends(get_db)):
         )
 
         # Determine the other participant
-        other_user_id = chat.seller_id if chat.buyer_id == user_id else chat.buyer_id
+        other_user_id = chat.seller_id if chat.buyer_id == target_user_id else chat.buyer_id
         other_user = db.query(User).filter(User.id == other_user_id).first()
         product = db.query(Product).filter(Product.id == chat.product_id).first()
 
@@ -419,14 +560,26 @@ def get_user_chats(user_id: int, db: Session = Depends(get_db)):
 
 
 @app.post("/chats/{chat_id}/messages")
-def send_message(chat_id: int, message: MessageCreate, db: Session = Depends(get_db)):
+def send_message(
+    chat_id: int,
+    message: MessageCreate,
+    current_user_payload: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
     chat = db.query(Chat).filter(Chat.id == chat_id).first()
     if not chat:
-        return {"success": False, "message": "Chat not found."}
+        raise HTTPException(status_code=404, detail="Chat not found.")
+
+    sender_id = int(current_user_payload["sub"])
+    if sender_id != chat.buyer_id and sender_id != chat.seller_id:
+        raise HTTPException(
+            status_code=http_status.HTTP_403_FORBIDDEN,
+            detail="You are not a participant in this chat.",
+        )
 
     new_msg = Message(
         chat_id=chat_id,
-        sender_id=message.sender_id,
+        sender_id=sender_id,
         message=message.message,
     )
     db.add(new_msg)
@@ -436,10 +589,21 @@ def send_message(chat_id: int, message: MessageCreate, db: Session = Depends(get
 
 
 @app.get("/chats/{chat_id}/messages")
-def get_messages(chat_id: int, db: Session = Depends(get_db)):
+def get_messages(
+    chat_id: int,
+    current_user_payload: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
     chat = db.query(Chat).filter(Chat.id == chat_id).first()
     if not chat:
-        return {"success": False, "message": "Chat not found."}
+        raise HTTPException(status_code=http_status.HTTP_404_NOT_FOUND, detail="Chat not found.")
+
+    user_id = int(current_user_payload["sub"])
+    if user_id != chat.buyer_id and user_id != chat.seller_id:
+        raise HTTPException(
+            status_code=http_status.HTTP_403_FORBIDDEN,
+            detail="You are not a participant in this chat.",
+        )
 
     msgs = (
         db.query(Message)
@@ -640,15 +804,20 @@ def check_scam(listing: ScamCheckRequest):
 # ---------------------------------------------------------------------------
 
 @app.post("/wishlist")
-def add_to_wishlist(wishlist: WishlistCreate, db: Session = Depends(get_db)):
+def add_to_wishlist(
+    wishlist: WishlistCreate,
+    current_user_payload: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    user_id = int(current_user_payload["sub"])
     existing_item = db.query(Wishlist).filter(
-        Wishlist.user_id == wishlist.user_id,
+        Wishlist.user_id == user_id,
         Wishlist.product_id == wishlist.product_id,
     ).first()
     if existing_item:
         return {"success": False, "message": "Product already in wishlist."}
 
-    new_item = Wishlist(user_id=wishlist.user_id, product_id=wishlist.product_id)
+    new_item = Wishlist(user_id=user_id, product_id=wishlist.product_id)
     db.add(new_item)
     db.commit()
     db.refresh(new_item)
@@ -658,7 +827,17 @@ def add_to_wishlist(wishlist: WishlistCreate, db: Session = Depends(get_db)):
 
 
 @app.get("/wishlist/{user_id}")
-def get_wishlist(user_id: int, db: Session = Depends(get_db)):
+def get_wishlist(
+    user_id: int,
+    current_user_payload: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    auth_user_id = int(current_user_payload["sub"])
+    if auth_user_id != user_id:
+        raise HTTPException(
+            status_code=http_status.HTTP_403_FORBIDDEN,
+            detail="You do not have permission to access another user's wishlist.",
+        )
     wishlist_items = db.query(Wishlist).filter(Wishlist.user_id == user_id).all()
     products = []
     for item in wishlist_items:
@@ -680,10 +859,19 @@ def get_wishlist(user_id: int, db: Session = Depends(get_db)):
 
 
 @app.delete("/wishlist/{wishlist_id}")
-def remove_from_wishlist(wishlist_id: int, db: Session = Depends(get_db)):
+def remove_from_wishlist(
+    wishlist_id: int,
+    current_user_payload: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
     wishlist_item = db.query(Wishlist).filter(Wishlist.id == wishlist_id).first()
     if not wishlist_item:
         return {"success": False, "message": "Wishlist item not found."}
+    if wishlist_item.user_id != int(current_user_payload["sub"]):
+        raise HTTPException(
+            status_code=http_status.HTTP_403_FORBIDDEN,
+            detail="You do not have permission to delete this wishlist item.",
+        )
     db.delete(wishlist_item)
     db.commit()
     return {"success": True, "message": "Product removed from wishlist."}

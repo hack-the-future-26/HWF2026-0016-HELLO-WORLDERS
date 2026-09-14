@@ -5,6 +5,7 @@
 
 export const API_BASE = "/api";
 export const UPLOADS_BASE = "http://localhost:8000";
+export const AUTH_TOKEN_KEY = "campus_thrift_token";
 
 // ── Generic fetch helpers ─────────────────────────────────────────────────────
 
@@ -16,6 +17,11 @@ async function request<T>(
 ): Promise<T> {
   const headers: Record<string, string> = {};
   if (body && !isForm) headers["Content-Type"] = "application/json";
+
+  const token = localStorage.getItem(AUTH_TOKEN_KEY);
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
 
   const res = await fetch(`${API_BASE}${path}`, {
     method,

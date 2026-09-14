@@ -17,8 +17,26 @@ class UserCreate(BaseModel):
     name: str
     email: str
     college: str
+    password: Optional[str] = None
     latitude: Optional[float] = None
     longitude: Optional[float] = None
+
+class UserRegister(BaseModel):
+    name: str
+    email: str
+    password: str
+    college: Optional[str] = "Campus University"
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+
+class UserLogin(BaseModel):
+    email: str
+    password: str
+
+class TokenResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+    user: dict
 
 class ChatCreate(BaseModel):
     product_id: int
