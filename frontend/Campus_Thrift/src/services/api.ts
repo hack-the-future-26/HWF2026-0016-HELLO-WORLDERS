@@ -113,6 +113,24 @@ export interface BackendWishlistItem {
   image_url: string | null;
 }
 
+export interface BackendRide {
+  id: number;
+  driver_id: number;
+  driver_name: string;
+  driver_avatar: string;
+  driver_rating: number;
+  driver_verified: boolean;
+  from: string;
+  to: string;
+  date: string;
+  departure_time: string;
+  price: number;
+  available_seats: number;
+  total_seats: number;
+  vehicle_info: string;
+  notes: string | null;
+}
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 const FALLBACK_IMAGE =

@@ -3,7 +3,7 @@ import os
 from dotenv import load_dotenv
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import Session
-from models import Chat, Message, Product, User, Wishlist
+from models import Chat, Message, Notification, Product, Ride, RideRequest, User, Wishlist
 
 load_dotenv()
 engine = create_engine(os.getenv("DATABASE_URL"))
@@ -12,7 +12,10 @@ with Session(engine) as db:
     # Delete children first so this also works when foreign-key enforcement is enabled.
     counts = {
         "messages": db.query(Message).delete(synchronize_session=False),
+        "ride_requests": db.query(RideRequest).delete(synchronize_session=False),
+        "notifications": db.query(Notification).delete(synchronize_session=False),
         "chats": db.query(Chat).delete(synchronize_session=False),
+        "rides": db.query(Ride).delete(synchronize_session=False),
         "wishlists": db.query(Wishlist).delete(synchronize_session=False),
         "products": db.query(Product).delete(synchronize_session=False),
         "users": db.query(User).delete(synchronize_session=False),
