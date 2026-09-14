@@ -14,12 +14,12 @@ engine = create_engine(os.getenv("DATABASE_URL"))
 Base.metadata.create_all(bind=engine)
 
 USERS = [
-    {"name": "Arjun Sharma",   "email": "arjun.sharma@iitd.edu",  "college": "IIT Delhi"},
-    {"name": "Priya Nair",     "email": "priya.nair@bits.edu",    "college": "BITS Pilani"},
-    {"name": "Rohan Mehta",    "email": "rohan.mehta@iitb.edu",   "college": "IIT Bombay"},
-    {"name": "Sneha Iyer",     "email": "sneha.iyer@vit.edu",     "college": "VIT Vellore"},
-    {"name": "Karthik Reddy",  "email": "karthik.r@nit.edu",      "college": "NIT Trichy"},
-    {"name": "Anika Gupta",    "email": "anika.gupta@du.edu",     "college": "Delhi University"},
+    {"name": "Arjun Sharma",   "email": "arjun.sharma@iitd.edu",  "college": "IIT Delhi",        "latitude": 28.5450, "longitude": 77.1926},
+    {"name": "Priya Nair",     "email": "priya.nair@bits.edu",    "college": "BITS Pilani",      "latitude": 28.5480, "longitude": 77.1960},
+    {"name": "Rohan Mehta",    "email": "rohan.mehta@iitb.edu",   "college": "IIT Bombay",       "latitude": 28.5405, "longitude": 77.1880},
+    {"name": "Sneha Iyer",     "email": "sneha.iyer@vit.edu",     "college": "VIT Vellore",      "latitude": 28.5520, "longitude": 77.1850},
+    {"name": "Karthik Reddy",  "email": "karthik.r@nit.edu",      "college": "NIT Trichy",       "latitude": 28.5360, "longitude": 77.1990},
+    {"name": "Anika Gupta",    "email": "anika.gupta@du.edu",     "college": "Delhi University", "latitude": 28.5580, "longitude": 77.2050},
 ]
 
 PRODUCTS = [
@@ -154,7 +154,10 @@ with Session(engine) as db:
             print(f"  [skip] user exists: {u['email']} (id={existing.id})")
             user_ids.append(existing.id)
         else:
-            new_u = User(name=u["name"], email=u["email"], college=u["college"], verified=True)
+            new_u = User(
+                name=u["name"], email=u["email"], college=u["college"], verified=True,
+                latitude=u["latitude"], longitude=u["longitude"],
+            )
             db.add(new_u)
             db.commit()
             db.refresh(new_u)
@@ -176,6 +179,8 @@ with Session(engine) as db:
                 condition=p["condition"],
                 description=p["description"],
                 image_url=p["image_url"],
+                latitude=USERS[i % len(USERS)]["latitude"],
+                longitude=USERS[i % len(USERS)]["longitude"],
                 status="active",
             ))
         db.commit()

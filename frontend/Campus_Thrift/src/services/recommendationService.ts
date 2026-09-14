@@ -1,5 +1,6 @@
 import { Product, Recommendation } from '../types';
-import { productService } from './productService';
+import { api, BackendProduct } from './api';
+import { mapProduct, productService } from './productService';
 
 /**
  * Frontend Heuristic Recommendation Service
@@ -25,6 +26,24 @@ class RecommendationService {
     // Find saved categories
     const savedProducts = activeProducts.filter(p => savedIds.includes(p.id));
     const savedCategories = new Set(savedProducts.map(p => p.category));
+
+    // Use the backend's explainable 5 km recommendation query when location is available.
+    const category = Array.from(viewedCategories)[0] ?? Array.from(savedCategories)[0] ?? 'textbooks';
+    const location = await this.getLocation();
+    if (location) {
+      try {
+        const response = await api.get<{
+          recommendations: (BackendProduct & { distance_km: number; recommendation_score: number })[];
+        }>(`/recommendations?category=${encodeURIComponent(category)}&latitude=${location.latitude}&longitude=${location.longitude}&radius=5`);
+        return response.recommendations.map(item => ({
+          product: mapProduct(item, savedIds.includes(String(item.id))),
+          reason: `Within ${item.distance_km} km of your campus${item.category.toLowerCase() === category.toLowerCase() ? ` and matches ${category.replace('-', ' ')}` : ''}`,
+          matchScore: item.recommendation_score,
+        }));
+      } catch {
+        // Keep the local heuristic as a graceful fallback if the API is unavailable.
+      }
+    }
 
     for (const product of activeProducts) {
       // Don't recommend items already viewed first
@@ -67,6 +86,18 @@ class RecommendationService {
     return recommendations
       .sort((a, b) => b.matchScore - a.matchScore)
       .slice(0, 6);
+  }
+
+  private getLocation(): Promise<{ latitude: number; longitude: number } | null> {
+    const campusFallback = { latitude: 28.5450, longitude: 77.1926 };
+    if (!navigator.geolocation) return Promise.resolve(campusFallback);
+    return new Promise(resolve => {
+      navigator.geolocation.getCurrentPosition(
+        position => resolve({ latitude: position.coords.latitude, longitude: position.coords.longitude }),
+        () => resolve(campusFallback),
+        { timeout: 1500 },
+      );
+    });
   }
 }
 

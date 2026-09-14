@@ -46,7 +46,7 @@ export const AuthPage: React.FC = () => {
       setApiError(
         err instanceof Error
           ? err.message
-          : 'Backend से connect नहीं हो पाया। क्या server चल रहा है?',
+          : 'Cannot connect to the server. Please check your internet connection and try again.',
       );
     } finally {
       setIsSubmitting(false);
@@ -65,7 +65,7 @@ export const AuthPage: React.FC = () => {
           Sign In / Register
         </h1>
         <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 max-w-sm mx-auto">
-          अपना <strong>.edu college email</strong> enter करें। Already registered हैं तो automatically login हो जाएगा।
+          Enter your <strong>.edu college email</strong> to continue. If you're already registered, you'll be automatically logged in.
         </p>
       </div>
 
@@ -86,7 +86,7 @@ export const AuthPage: React.FC = () => {
               type="text"
               value={name}
               onChange={e => { setName(e.target.value); clearErr('name'); }}
-              placeholder="जैसे: Arjun Sharma"
+              placeholder="e.g. Arjun Sharma"
               autoComplete="name"
               className={`w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border rounded-xl text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 ${
                 errors.name ? 'border-rose-500' : 'border-slate-200 dark:border-slate-700'
@@ -151,7 +151,7 @@ export const AuthPage: React.FC = () => {
         </form>
 
         <p className="text-[11px] text-slate-400 text-center leading-relaxed">
-          Already registered? उसी .edu email से login करें — तुरंत access मिलेगा।
+          Already registered? Click <strong>Continue with Student ID</strong> to log in. Your data is stored securely and will not be shared with third parties.
         </p>
       </div>
     </div>

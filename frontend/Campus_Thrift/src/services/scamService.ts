@@ -1,4 +1,12 @@
 import { ScamAnalysisResult, ScamSignal, ScamSeverity } from '../types';
+import { api } from './api';
+
+export interface ServerRiskResult {
+  success: boolean;
+  risk_level: 'LOW' | 'MEDIUM' | 'HIGH';
+  risk_score: number;
+  warnings: string[];
+}
 
 /**
  * Frontend Advisory Scam & Safety Check Service
@@ -8,6 +16,10 @@ import { ScamAnalysisResult, ScamSignal, ScamSeverity } from '../types';
  * guarantee fraud prevention. It NEVER automatically blocks or rejects a listing.
  */
 class ScamService {
+  public async checkListing(title: string, description: string, price: number): Promise<ServerRiskResult> {
+    return api.post<ServerRiskResult>('/scam-check', { title, description, price });
+  }
+
   public analyzeListing(
     title: string,
     description: string,
@@ -90,7 +102,7 @@ class ScamService {
       signals.push({
         severity: 'warning',
         title: 'Unusually Low Price for Category',
-        description: `Price (\$${price}) is unusually low for ${category}. Could be for parts, a replica, or a demo listing.`,
+        description: `Price (\₹${price}) is unusually low for ${category}. Could be for parts, a replica, or a demo listing.`,
         advice: 'Safety check: Test device functionality or mechanical condition in person before paying.'
       });
     }

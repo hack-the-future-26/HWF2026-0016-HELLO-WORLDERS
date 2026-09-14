@@ -14,7 +14,7 @@ export const SafetyBanner: React.FC<SafetyBannerProps> = ({ compact = false }) =
           <span className="font-semibold text-emerald-950 dark:text-emerald-200">
             Campus Safety Reminder:{' '}
           </span>
-          सुरक्षित स्थान पर मिलें — Central Library, Admin Block, या Hostel Common Room। Payment से पहले item जरूर check करें।
+            Meet in a safe location — Central Library, Admin Block, or Hostel Common Room. Always check the item before payment.
         </div>
       </div>
     );
@@ -35,24 +35,24 @@ export const SafetyBanner: React.FC<SafetyBannerProps> = ({ compact = false }) =
         <div className="flex items-start gap-2 bg-white/70 dark:bg-slate-800/60 p-3 rounded-xl border border-emerald-100 dark:border-slate-700">
           <MapPin className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
           <div>
-            <span className="font-semibold text-slate-900 dark:text-white block">सुरक्षित स्थान</span>
-            Central Library, Admin Block, Canteen, या Campus Security Post पर ही मिलें।
+            <span className="font-semibold text-slate-900 dark:text-white block">Safe Location</span>
+            Meet only at the Central Library, Admin Block, Canteen, or Campus Security Post.
           </div>
         </div>
 
         <div className="flex items-start gap-2 bg-white/70 dark:bg-slate-800/60 p-3 rounded-xl border border-emerald-100 dark:border-slate-700">
           <Eye className="w-4 h-4 text-teal-600 dark:text-teal-400 shrink-0 mt-0.5" />
           <div>
-            <span className="font-semibold text-slate-900 dark:text-white block">पहले जाँचें</span>
-            Electronics on करके, textbook के pages देखकर, या cycle चला कर confirm करें — तभी payment करें।
+            <span className="font-semibold text-slate-900 dark:text-white block">Check First</span>
+            Turn on electronics, inspect textbook pages, or test-ride a bicycle before making payment.
           </div>
         </div>
 
         <div className="flex items-start gap-2 bg-white/70 dark:bg-slate-800/60 p-3 rounded-xl border border-emerald-100 dark:border-slate-700">
           <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
           <div>
-            <span className="font-semibold text-slate-900 dark:text-white block">Advance न दें</span>
-            कभी भी advance UPI, gift card, या wire transfer न करें — item मिलने पर ही pay करें।
+            <span className="font-semibold text-slate-900 dark:text-white block">Never Pay in Advance</span>
+            Never pay in advance by UPI, gift card, or wire transfer. Pay only after receiving the item.
           </div>
         </div>
       </div>

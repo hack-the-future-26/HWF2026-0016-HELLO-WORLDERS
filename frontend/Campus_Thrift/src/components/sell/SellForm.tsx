@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { HelpCircle, MapPin, Upload, X } from 'lucide-react';
 import { Category, ProductCondition } from '../../types';
 import { productService } from '../../services/productService';
-import { scamService } from '../../services/scamService';
+import { scamService, ServerRiskResult } from '../../services/scamService';
 import { useAuth } from '../../context/AuthContext';
 import { PriceGuidanceModal } from './PriceGuidanceModal';
 import { ScamWarning } from '../common/ScamWarning';
@@ -30,6 +30,8 @@ export const SellForm: React.FC = () => {
   const [showPriceGuide, setShowPriceGuide] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isCheckingRisk, setIsCheckingRisk] = useState(false);
+  const [serverRisk, setServerRisk] = useState<ServerRiskResult | null>(null);
   const [submitError, setSubmitError] = useState('');
 
   const scamAnalysis = scamService.analyzeListing(
@@ -73,10 +75,22 @@ export const SellForm: React.FC = () => {
     return Object.keys(e).length === 0;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitError('');
-    if (validate()) setShowConfirm(true);
+    if (!validate()) return;
+
+    setIsCheckingRisk(true);
+    try {
+      const result = await scamService.checkListing(title.trim(), description.trim(), Number(price));
+      setServerRisk(result);
+    } catch {
+      // The local advisory remains available if the backend risk endpoint is offline.
+      setServerRisk(null);
+    } finally {
+      setIsCheckingRisk(false);
+      setShowConfirm(true);
+    }
   };
 
   const handlePublish = async () => {
@@ -111,10 +125,10 @@ export const SellForm: React.FC = () => {
     <div className="max-w-3xl mx-auto space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-slate-900 dark:text-white">
-          CampusThrift पर Item List करें
+          CampusThrift — Sell Your Used Items
         </h1>
         <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-          पुरानी किताबें, electronics, और hostel gear बेचकर पैसे कमाएं।
+          Sell your textbooks, electronics, and campus essentials to fellow students. Fill out the form below to create a listing.
         </p>
       </div>
 
@@ -133,7 +147,7 @@ export const SellForm: React.FC = () => {
             type="text"
             value={title}
             onChange={e => setTitle(e.target.value)}
-            placeholder="जैसे: R.D. Sharma Class 12 या Casio fx-991ES Calculator"
+            placeholder="e.g. R.D. Sharma Class 12,Casio fx-991ES Calculator"
             className={`w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border rounded-xl text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 ${
               errors.title ? 'border-rose-500' : 'border-slate-200 dark:border-slate-700'
             }`}
@@ -171,7 +185,7 @@ export const SellForm: React.FC = () => {
               onChange={e => setCondition(e.target.value as ProductCondition)}
               className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
             >
-              <option value="brand-new">बिल्कुल नया (Sealed)</option>
+              <option value="brand-new">Sealed</option>
               <option value="like-new">Like New (barely used)</option>
               <option value="good">Good (normal wear)</option>
               <option value="fair">Fair (visible wear, works fine)</option>
@@ -202,7 +216,7 @@ export const SellForm: React.FC = () => {
               step="1"
               value={price}
               onChange={e => setPrice(e.target.value ? Number(e.target.value) : '')}
-              placeholder="जैसे: 350"
+              placeholder="e.g. 350"
               className={`w-full pl-8 pr-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border rounded-xl text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 ${
                 errors.price ? 'border-rose-500' : 'border-slate-200 dark:border-slate-700'
               }`}
@@ -220,7 +234,7 @@ export const SellForm: React.FC = () => {
             rows={4}
             value={description}
             onChange={e => setDescription(e.target.value)}
-            placeholder="Item की condition, कोई accessories included हैं, selling reason — सब mention करें।"
+            placeholder="Item's condition, any accessories included, selling reason — mention all."
             className={`w-full p-3.5 bg-slate-50 dark:bg-slate-800 border rounded-xl text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 ${
               errors.description ? 'border-rose-500' : 'border-slate-200 dark:border-slate-700'
             }`}
@@ -258,7 +272,7 @@ export const SellForm: React.FC = () => {
               <div className="p-2.5 rounded-xl bg-slate-100 dark:bg-slate-800">
                 <Upload className="w-5 h-5" />
               </div>
-              <span className="text-xs font-semibold">Photo upload करें</span>
+              <span className="text-xs font-semibold">Upload a photo</span>
               <span className="text-[11px]">JPG, PNG, WEBP — max {MAX_MB} MB</span>
             </button>
           )}
@@ -283,7 +297,7 @@ export const SellForm: React.FC = () => {
               type="text"
               value={pickupLocation}
               onChange={e => setPickupLocation(e.target.value)}
-              placeholder="जैसे: Central Library, Hostel 5 Gate, Admin Block Lobby"
+              placeholder="e.g. Central Library, Hostel 5 Gate, Admin Block Lobby"
               className={`w-full pl-10 pr-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border rounded-xl text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 ${
                 errors.pickupLocation ? 'border-rose-500' : 'border-slate-200 dark:border-slate-700'
               }`}
@@ -301,7 +315,7 @@ export const SellForm: React.FC = () => {
             type="text"
             value={tagsInput}
             onChange={e => setTagsInput(e.target.value)}
-            placeholder="जैसे: rd sharma, class12, maths, cbse"
+            placeholder="e.g. rd sharma, class12, maths, cbse"
             className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
           />
         </div>
@@ -322,9 +336,10 @@ export const SellForm: React.FC = () => {
           </button>
           <button
             type="submit"
+            disabled={isCheckingRisk}
             className="px-6 py-2.5 rounded-xl text-sm font-semibold bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm transition-colors"
           >
-            Review &amp; Publish
+            {isCheckingRisk ? 'Checking risk…' : 'Review \&amp; Publish'}
           </button>
         </div>
       </form>
@@ -335,8 +350,8 @@ export const SellForm: React.FC = () => {
         isOpen={showConfirm}
         onClose={() => setShowConfirm(false)}
         onConfirm={handlePublish}
-        title="Listing Publish करें?"
-        description={`"${title}" को ₹${price} में publish करने जा रहे हैं — pickup: ${pickupLocation}. यह listing तुरंत marketplace पर दिखेगी।`}
+        title="Confirm Publish"
+        description={`"${title}" going to be listed at ₹${price}  — pickup: ${pickupLocation}. ${serverRisk ? `Server risk check: ${serverRisk.risk_level} (${serverRisk.risk_score}/100).` : ''} This listing will be visible on the marketplace immediately.`}
         confirmText={isSubmitting ? 'Publishing…' : 'Publish Now'}
       />
     </div>

@@ -424,6 +424,7 @@ def get_recommendations(
     category: str,
     latitude: float,
     longitude: float,
+    radius: float = 5,
     db: Session = Depends(get_db),
 ):
     products = db.query(Product).all()
@@ -517,8 +518,8 @@ def add_to_wishlist(wishlist: WishlistCreate, db: Session = Depends(get_db)):
     new_item = Wishlist(user_id=wishlist.user_id, product_id=wishlist.product_id)
     db.add(new_item)
     db.commit()
-    db.refresh(item)
-    return {"success": True, "message": "Added to wishlist.", "wishlist": item}
+    db.refresh(new_item)
+    return {"success": True, "message": "Added to wishlist.", "wishlist": new_item}
 
     return {"success": True, "message": "Product added to wishlist.", "wishlist": new_item}
 
