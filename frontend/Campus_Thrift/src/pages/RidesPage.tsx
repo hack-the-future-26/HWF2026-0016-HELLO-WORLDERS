@@ -131,7 +131,7 @@ export const RidesPage: React.FC = () => {
             CampusThrift allows only verified batchmates to post or join rides. Check driver profile &amp; reviews before confirming.
           </div>
           <div>
-            <strong className="block text-slate-800 dark:text-slate-200">Campus Gate पर मिलें</strong>
+            <strong className="block text-slate-800 dark:text-slate-200">Meet at the Campus Gate</strong>
             always meet at campus gates or public areas. Avoid sharing your home address or meeting in secluded locations.
           </div>
           <div>

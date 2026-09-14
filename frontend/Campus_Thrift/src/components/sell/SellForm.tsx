@@ -272,7 +272,7 @@ export const SellForm: React.FC = () => {
               <div className="p-2.5 rounded-xl bg-slate-100 dark:bg-slate-800">
                 <Upload className="w-5 h-5" />
               </div>
-              <span className="text-xs font-semibold">Photo upload करें</span>
+              <span className="text-xs font-semibold">Upload a photo</span>
               <span className="text-[11px]">JPG, PNG, WEBP — max {MAX_MB} MB</span>
             </button>
           )}
