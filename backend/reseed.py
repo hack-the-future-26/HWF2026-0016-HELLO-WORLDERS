@@ -1,17 +1,26 @@
-"""Clears products table and re-runs seed."""
+"""Clear demo data and re-run seed. Use when you want a fresh app state."""
 import os
 from dotenv import load_dotenv
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import Session
-from models import Product
+from models import Chat, Message, Notification, Product, Ride, RideRequest, User, Wishlist
 
 load_dotenv()
 engine = create_engine(os.getenv("DATABASE_URL"))
 
 with Session(engine) as db:
-    deleted = db.query(Product).delete()
+    # Delete children first so this also works when foreign-key enforcement is enabled.
+    counts = {
+        "messages": db.query(Message).delete(synchronize_session=False),
+        "ride_requests": db.query(RideRequest).delete(synchronize_session=False),
+        "notifications": db.query(Notification).delete(synchronize_session=False),
+        "chats": db.query(Chat).delete(synchronize_session=False),
+        "rides": db.query(Ride).delete(synchronize_session=False),
+        "wishlists": db.query(Wishlist).delete(synchronize_session=False),
+        "products": db.query(Product).delete(synchronize_session=False),
+        "users": db.query(User).delete(synchronize_session=False),
+    }
     db.commit()
-    print(f"Deleted {deleted} existing products.")
+    print("Deleted: " + ", ".join(f"{name}={count}" for name, count in counts.items()))
 
-# Now run the full seed
 exec(open("seed.py").read())

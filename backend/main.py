@@ -15,6 +15,9 @@ from schemas import (
     UserRegister,
     UserLogin,
     TokenResponse,
+    RideCreate,
+    RideRequestCreate,
+    NotificationReadUpdate,
 )
 from auth import (
     hash_password,
@@ -27,12 +30,11 @@ import shutil
 import math
 import uuid
 
-from models import Base, Product, User, Chat, Message, Wishlist
+from models import Base, Product, User, Chat, Message, Wishlist, Ride, RideRequest, Notification
 
 load_dotenv()
 
 DATABASE_URL = os.getenv("DATABASE_URL")
-
 engine = create_engine(DATABASE_URL)
 Base.metadata.create_all(bind=engine)
 
@@ -78,6 +80,49 @@ def get_db():
         db.close()
 
 
+def validate_edu_email(email: str):
+    if "@" not in email or ".edu" not in email.lower():
+        raise HTTPException(
+            status_code=400,
+            detail="Only verified university .edu email addresses are accepted (e.g. name@iitd.edu).",
+        )
+
+
+def serialize_ride(ride: Ride, driver: User | None):
+    return {
+        "id": ride.id,
+        "driver_id": ride.driver_id,
+        "driver_name": driver.name if driver else "Campus student",
+        "driver_avatar": f"https://ui-avatars.com/api/?name={(driver.name if driver else 'Campus Student').replace(' ', '+')}&background=059669&color=fff&size=200",
+        "driver_rating": 5.0,
+        "driver_verified": bool(driver and driver.verified),
+        "from": ride.from_location,
+        "to": ride.to_location,
+        "date": ride.date,
+        "departure_time": ride.departure_time,
+        "price": ride.price,
+        "available_seats": ride.available_seats,
+        "total_seats": ride.total_seats,
+        "vehicle_info": ride.vehicle_info,
+        "notes": ride.notes,
+    }
+
+
+def serialize_notification(notification: Notification):
+    return {
+        "id": str(notification.id),
+        "user_id": str(notification.user_id),
+        "type": notification.notification_type,
+        "title": notification.title,
+        "body": notification.body,
+        "timestamp": notification.created_at.isoformat(),
+        "is_read": notification.is_read,
+        "link": notification.link,
+    }
+
+
+# ── root / health ─────────────────────────────────────────────────────────────
+
 @app.get("/")
 def home():
     return {"message": "Welcome to Campus Thrift API!"}
@@ -86,15 +131,14 @@ def home():
 @app.get("/health")
 def health_check():
     try:
-        with engine.connect() as connection:
-            connection.execute(text("SELECT 1"))
-        return {"status": "Backend and database are connected"}
+        with engine.connect() as conn:
+            conn.execute(text("SELECT 1"))
+        return {"status": "ok", "message": "Backend and database are connected."}
     except Exception as e:
-        return {
-            "status": "Database connection failed",
-            "error": str(e)
-        }
+        return {"status": "error", "message": str(e)}
 
+
+# ── products ──────────────────────────────────────────────────────────────────
 @app.post("/products")
 def create_product(
     title: str = Form(...),
@@ -133,8 +177,8 @@ def create_product(
         image_url=image_url,
         latitude=latitude,
         longitude=longitude,
+        status="active",
     )
-
     db.add(new_product)
     db.commit()
     db.refresh(new_product)
@@ -179,7 +223,6 @@ def get_nearby_products(
                 }
             )
     return nearby_products
-
 
 @app.get("/products/{product_id}")
 def get_product(product_id: int, db: Session = Depends(get_db)):
@@ -342,10 +385,65 @@ def register_user(user: UserCreate, db: Session = Depends(get_db)):
         longitude=user.longitude,
         password_hash=password_hash,
     )
-
     db.add(new_user)
     db.commit()
     db.refresh(new_user)
+    return {"success": True, "message": "Registered successfully.", "user": new_user}
+
+
+@app.get("/users/{user_id}")
+def get_user(user_id: int, db: Session = Depends(get_db)):
+    u = db.query(User).filter(User.id == user_id).first()
+    if not u:
+        raise HTTPException(status_code=404, detail="User not found.")
+    return u
+
+
+# ── chats ─────────────────────────────────────────────────────────────────────
+
+@app.get("/chats")
+def get_user_chats(user_id: int, db: Session = Depends(get_db)):
+    chats = db.query(Chat).filter(
+        (Chat.buyer_id == user_id) | (Chat.seller_id == user_id)
+    ).all()
+
+    result = []
+    for chat in chats:
+        last_msg = (
+            db.query(Message)
+            .filter(Message.chat_id == chat.id)
+            .order_by(Message.id.desc())
+            .first()
+        )
+        other_id = chat.seller_id if chat.buyer_id == user_id else chat.buyer_id
+        other_user = db.query(User).filter(User.id == other_id).first()
+        product = db.query(Product).filter(Product.id == chat.product_id).first()
+
+        result.append({
+            "id": chat.id,
+            "product_id": chat.product_id,
+            "buyer_id": chat.buyer_id,
+            "seller_id": chat.seller_id,
+            "last_message": last_msg.message if last_msg else None,
+            "last_message_id": last_msg.id if last_msg else 0,
+            "other_user": {
+                "id": other_user.id,
+                "name": other_user.name,
+                "email": other_user.email,
+                "college": other_user.college,
+                "verified": other_user.verified,
+            } if other_user else None,
+            "product": {
+                "id": product.id,
+                "title": product.title,
+                "price": product.price,
+                "image_url": product.image_url,
+                "condition": product.condition,
+            } if product else None,
+        })
+
+    result.sort(key=lambda x: x["last_message_id"], reverse=True)
+    return {"success": True, "chats": result}
 
     return {
         "success": True,
@@ -479,16 +577,15 @@ def send_message(
             detail="You are not a participant in this chat.",
         )
 
-    new_message = Message(
+    new_msg = Message(
         chat_id=chat_id,
         sender_id=sender_id,
         message=message.message,
     )
-    db.add(new_message)
+    db.add(new_msg)
     db.commit()
-    db.refresh(new_message)
-
-    return {"success": True, "message": new_message}
+    db.refresh(new_msg)
+    return {"success": True, "message": new_msg}
 
 
 @app.get("/chats/{chat_id}/messages")
@@ -508,25 +605,123 @@ def get_messages(
             detail="You are not a participant in this chat.",
         )
 
-    messages = (
+    msgs = (
         db.query(Message)
         .filter(Message.chat_id == chat_id)
         .order_by(Message.id.asc())
         .all()
     )
+    return {"success": True, "chat_id": chat_id, "messages": msgs}
 
-    return {"success": True, "chat_id": chat_id, "messages": messages}
+
+# ── rides and ride requests ──────────────────────────────────────────────────
+
+@app.get("/rides")
+def get_rides(db: Session = Depends(get_db)):
+    rides = db.query(Ride).filter(Ride.status == "active").order_by(Ride.id.desc()).all()
+    return [serialize_ride(ride, db.query(User).filter(User.id == ride.driver_id).first()) for ride in rides]
 
 
-# ---------------------------------------------------------------------------
-# Recommendations
-# ---------------------------------------------------------------------------
+@app.post("/rides")
+def create_ride(ride: RideCreate, db: Session = Depends(get_db)):
+    driver = db.query(User).filter(User.id == ride.driver_id).first()
+    if not driver:
+        raise HTTPException(status_code=404, detail="Driver user not found")
+    if ride.total_seats < 1:
+        raise HTTPException(status_code=400, detail="A ride must have at least one seat")
+    if ride.price < 0:
+        raise HTTPException(status_code=400, detail="Ride price cannot be negative")
+
+    new_ride = Ride(
+        driver_id=ride.driver_id,
+        from_location=ride.from_location,
+        to_location=ride.to_location,
+        date=ride.date,
+        departure_time=ride.departure_time,
+        price=ride.price,
+        total_seats=ride.total_seats,
+        available_seats=ride.total_seats,
+        vehicle_info=ride.vehicle_info,
+        notes=ride.notes,
+    )
+    db.add(new_ride)
+    db.commit()
+    db.refresh(new_ride)
+    return {"success": True, "ride": serialize_ride(new_ride, driver)}
+
+
+@app.post("/rides/{ride_id}/requests")
+def request_ride(ride_id: int, request: RideRequestCreate, db: Session = Depends(get_db)):
+    ride = db.query(Ride).filter(Ride.id == ride_id, Ride.status == "active").first()
+    requester = db.query(User).filter(User.id == request.requester_id).first()
+    if not ride:
+        raise HTTPException(status_code=404, detail="Ride not found")
+    if not requester:
+        raise HTTPException(status_code=404, detail="Requester user not found")
+    if ride.driver_id == request.requester_id:
+        raise HTTPException(status_code=400, detail="You cannot request your own ride")
+    if request.seats_requested < 1 or request.seats_requested > ride.available_seats:
+        raise HTTPException(status_code=400, detail="Requested seats are not available")
+    existing = db.query(RideRequest).filter(
+        RideRequest.ride_id == ride_id,
+        RideRequest.requester_id == request.requester_id,
+        RideRequest.status == "pending",
+    ).first()
+    if existing:
+        raise HTTPException(status_code=409, detail="You already requested this ride")
+
+    ride_request = RideRequest(
+        ride_id=ride_id,
+        requester_id=request.requester_id,
+        seats_requested=request.seats_requested,
+    )
+    ride.available_seats -= request.seats_requested
+    notification = Notification(
+        user_id=ride.driver_id,
+        notification_type="ride_request",
+        title="New carpool ride request",
+        body=f"{requester.name} requested {request.seats_requested} seat(s) for your ride from {ride.from_location} to {ride.to_location}.",
+        link=f"/rides/{ride.id}/requests",
+    )
+    db.add(ride_request)
+    db.add(notification)
+    db.commit()
+    db.refresh(ride_request)
+    return {"success": True, "message": "Ride owner notified", "request": ride_request}
+
+
+@app.get("/notifications/{user_id}")
+def get_notifications(user_id: int, db: Session = Depends(get_db)):
+    notifications = db.query(Notification).filter(Notification.user_id == user_id).order_by(Notification.created_at.desc()).all()
+    return [serialize_notification(notification) for notification in notifications]
+
+
+@app.patch("/notifications/{notification_id}/read")
+def mark_notification_read(notification_id: int, update: NotificationReadUpdate, db: Session = Depends(get_db)):
+    notification = db.query(Notification).filter(Notification.id == notification_id).first()
+    if not notification:
+        raise HTTPException(status_code=404, detail="Notification not found")
+    notification.is_read = update.is_read
+    db.commit()
+    db.refresh(notification)
+    return serialize_notification(notification)
+
+
+@app.patch("/notifications/read-all/{user_id}")
+def mark_all_notifications_read(user_id: int, db: Session = Depends(get_db)):
+    db.query(Notification).filter(Notification.user_id == user_id, Notification.is_read == False).update({Notification.is_read: True})
+    db.commit()
+    return {"success": True}
+
+
+# ── recommendations ───────────────────────────────────────────────────────────
 
 @app.get("/recommendations")
 def get_recommendations(
     category: str,
     latitude: float,
     longitude: float,
+    radius: float = 5,
     db: Session = Depends(get_db),
 ):
     products = db.query(Product).all()
@@ -539,7 +734,6 @@ def get_recommendations(
         distance = calculate_distance(latitude, longitude, product.latitude, product.longitude)
         if distance > 10:
             continue
-
         score = 0
         if product.category.lower() == category.lower():
             score += 60
@@ -551,7 +745,6 @@ def get_recommendations(
             score += 10
         if product.price <= 1000:
             score += 10
-
         recommendations.append(
             {
                 "id": product.id,
@@ -565,7 +758,6 @@ def get_recommendations(
                 "recommendation_score": score,
             }
         )
-
     recommendations.sort(key=lambda x: x["recommendation_score"], reverse=True)
     return {"success": True, "category": category, "recommendations": recommendations[:5]}
 
@@ -596,23 +788,15 @@ def check_scam(listing: ScamCheckRequest):
 
     if listing.price < 100:
         score += 20
-        warnings.append("Price is unusually low.")
+        warnings.append("Price is unusually low — verify the listing carefully.")
 
     score = min(score, 100)
+    risk_level = "HIGH" if score >= 60 else "MEDIUM" if score >= 30 else "LOW"
 
-    if score >= 60:
-        risk_level = "HIGH"
-    elif score >= 30:
-        risk_level = "MEDIUM"
-    else:
-        risk_level = "LOW"
+    return {"success": True, "risk_level": risk_level, "risk_score": score, "warnings": warnings}
 
-    return {
-        "success": True,
-        "risk_level": risk_level,
-        "risk_score": score,
-        "warnings": warnings,
-    }
+
+# ── wishlist ──────────────────────────────────────────────────────────────────
 
 
 # ---------------------------------------------------------------------------
@@ -637,6 +821,7 @@ def add_to_wishlist(
     db.add(new_item)
     db.commit()
     db.refresh(new_item)
+    return {"success": True, "message": "Added to wishlist.", "wishlist": new_item}
 
     return {"success": True, "message": "Product added to wishlist.", "wishlist": new_item}
 
