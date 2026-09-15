@@ -15,6 +15,8 @@ from models import Base, Product, User, Chat, Message, Wishlist, Ride, RideReque
 load_dotenv()
 
 DATABASE_URL = os.getenv("DATABASE_URL")
+if not DATABASE_URL:
+    raise RuntimeError("DATABASE_URL must be set")
 engine = create_engine(DATABASE_URL)
 Base.metadata.create_all(bind=engine)
 
@@ -23,15 +25,22 @@ app = FastAPI(title="Campus Thrift API")
 os.makedirs("uploads", exist_ok=True)
 app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
-# Allow Vite dev server (port 5173) and any other origins for hackathon
+configured_origins = os.getenv("CORS_ORIGINS", "")
+allowed_origins = [
+    origin.strip().rstrip("/")
+    for origin in configured_origins.split(",")
+    if origin.strip()
+]
+allowed_origins.extend([
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "http://localhost:4173",
+    "http://localhost:3000",
+])
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
-        "http://localhost:4173",  # vite preview
-        "http://localhost:3000",
-    ],
+    allow_origins=list(dict.fromkeys(allowed_origins)),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

@@ -1,10 +1,11 @@
 /**
- * Central API client — all requests proxy through Vite to http://localhost:8000
- * Proxy: /api/* → http://localhost:8000/* (strips /api prefix)
+ * In development, requests use Vite's /api proxy. In production, Vercel
+ * talks directly to the deployed FastAPI service.
  */
+const configuredBackendUrl = import.meta.env.VITE_BACKEND_URL?.replace(/\/$/, "");
 
-export const API_BASE = "/api";
-export const UPLOADS_BASE = "http://localhost:8000";
+export const API_BASE = configuredBackendUrl || "/api";
+export const UPLOADS_BASE = configuredBackendUrl || "http://localhost:8000";
 
 // ── Generic fetch helpers ─────────────────────────────────────────────────────
 
